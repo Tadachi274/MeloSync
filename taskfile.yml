@@ -1,0 +1,67 @@
+dotenv:
+  - ".env"
+
+version: "3"
+
+vars:
+  MIGRATIONS_DIR: infra/db/migrations
+  COMPOSE_PROJECT_NAME: congestion-map
+
+tasks:
+  compose-up:
+    cmds:
+      - docker compose -p {{.COMPOSE_PROJECT_NAME}} up -d
+    silent: true
+  compose-down:
+    cmds:
+      - docker compose -p {{.COMPOSE_PROJECT_NAME}} down
+    silent: true
+
+  run-main-server:
+    dir: ./main_server
+    env:
+      DB_USER: '{{.DB_USER}}'
+      DB_PASSWORD: '{{.DB_PASSWORD}}'
+      DB_NAME: '{{.DB_NAME}}'
+      DB_HOST: '{{.DB_HOST}}'
+      DB_PORT: '{{.DB_PORT}}'
+      PORT: '8080'
+    cmds:
+      - python hello.py
+
+  install-dev-tools:
+    cmds:
+      - go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+  
+  local-migrate-up:
+    desc: Apply all pending database migrations
+    cmds:
+      - migrate -database "{{.LOCAL_DB_URL}}" -path {{.MIGRATIONS_DIR}} up
+
+  local-migrate-down:
+    desc: Roll back the last applied migration
+    cmds:
+      - migrate -database "{{.LOCAL_DB_URL}}" -path {{.MIGRATIONS_DIR}} down 1
+
+  remote-migrate-up:
+    desc: Apply all pending database migrations
+    cmds:
+      - migrate -database "{{.EXTERNAL_DB_URL}}" -path {{.MIGRATIONS_DIR}} up
+
+  remote-migrate-down:
+    desc: Roll back the last applied migration
+    cmds:
+      - migrate -database "{{.EXTERNAL_DB_URL}}" -path {{.MIGRATIONS_DIR}} down 1
+
+  migrate-create:
+    desc: Create new migration files
+    cmds:
+      - migrate create -ext sql -dir {{.MIGRATIONS_DIR}} {{.CLI_ARGS}}
+    requires:
+      vars: [CLI_ARGS]
+
+
+
+
+
+
