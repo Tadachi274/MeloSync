@@ -5,7 +5,7 @@ version: "3"
 
 vars:
   MIGRATIONS_DIR: infra/db/migrations
-  COMPOSE_PROJECT_NAME: congestion-map
+  COMPOSE_PROJECT_NAME: melo-sync
 
 tasks:
   compose-up:
@@ -59,6 +59,13 @@ tasks:
       - migrate create -ext sql -dir {{.MIGRATIONS_DIR}} {{.CLI_ARGS}}
     requires:
       vars: [CLI_ARGS]
+
+  seed:
+    desc: Populate the local database with seed data using Go script
+    dir: infra/db/seed
+    cmds:
+      - go mod tidy
+      - go run seed.go
 
 
 
