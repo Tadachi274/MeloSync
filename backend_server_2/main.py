@@ -11,29 +11,42 @@ from label_processing import create_target_label_for_start_mood
 from model import build_classification_model
 from recommend import recommend_songs_for_target
 
-# --- 1. データの読み込みと初期的な特徴量エンジニアリング（一度だけ実行） ---
-print("ステップ 1/4: データを読み込み、Spotifyの特徴量を取得...")
-df_raw = pd.read_csv('data/melosync_music_data.csv')
+# --- 1. データ読み込みとフォーマット変換 ---
+print("ステップ 1/5: ワイド形式のデータを読み込み、ロング形式へ変換...")
+df_wide = pd.read_csv('data/melosync_music_data.csv')
 
-CLIENT_ID = 'あなたのclient_id'
-CLIENT_SECRET = 'あなたのclient_secret'
+# 感情の列名を指定
+mood_columns = ['Angry/Frustrated', 'Happy/Excited', 'Relax/Chill', 'Tired/Sad']
+
+# pd.melt()でワイド形式からロング形式へ変換
+df_long = pd.melt(df_wide,
+                  id_vars=['spotify_url'],
+                  value_vars=mood_columns,
+                  var_name='start_mood',
+                  value_name='end_mood')
+
+# 変換によって生じたNaN（空白）の行を削除
+df_long.dropna(subset=['end_mood'], inplace=True)
+
+# 変換後のdf_longを元のdf_rawとして使用
+df_raw = df_long
+
+# --- 2. Spotifyからオーディオ特徴量を取得 ---
+print("ステップ 2/5: Spotifyの特徴量を取得...")
+CLIENT_ID = '你的client_id'
+CLIENT_SECRET = '你的client_secret'
+# 以降の処理は、変換後のデータを使用
 audio_features_df = fetch_audio_features(df_raw, CLIENT_ID, CLIENT_SECRET, url_col='spotify_url')
-
-selected_feature_cols = ['danceability', 'energy', 'key', 'loudness', 'mode',
-                         'speechiness', 'acousticness', 'instrumentalness', 'liveness',
-                         'valence', 'tempo', 'duration_ms']
-audio_features_df_selected = audio_features_df.rename(columns={'id': 'track_id'})[['track_id'] + selected_feature_cols]
-
 # 元のユーザー遷移データと楽曲の特徴量をマージ
 df_merged = pd.merge(df_raw, audio_features_df_selected, on='track_id', how='inner')
 df_merged.dropna(subset=selected_feature_cols, inplace=True)
 
-mood_map = {'Angry': 0, 'Happy': 1, 'Relaxed': 2, 'Sad': 3}
+mood_map = {'Angry/Frustrated': 0, 'Happy/Excited': 1, 'Relax/Chill': 2, 'Tired/Sad': 3}
 df_merged['start_mood_encoded'] = df_merged['start_mood'].map(mood_map)
 df_merged['end_mood_encoded'] = df_merged['end_mood'].map(mood_map)
 
-# --- 2. 各開始感情に対し、独立したモデルを訓練 ---
-print("\nステップ 2/4: 4つの感情それぞれに対し、モデルの訓練を開始...")
+# --- 3. 各開始感情に対し、独立したモデルを訓練 ---
+print("\nステップ 3/5: 4つの感情それぞれに対し、モデルの訓練を開始...")
 trained_models = {}
 all_scalers = {}
 
@@ -76,11 +89,11 @@ for mood_name, start_mood_code in mood_map.items():
     trained_models[mood_name] = model
     print(f"モデルを {model_path} に保存しました。")
 
-# --- 3. 推薦の実行例 ---
-print("\nステップ 3/4: 推薦の実行例...")
+# --- 4. 推薦の実行例 ---
+print("\nステップ 4/5: 推薦の実行例...")
 # ユーザーの現在の感情が 'Angry'（怒り）で、目標が 'Happy'（幸せ）であると仮定
-user_start_mood_name = 'Angry'
-user_target_mood_name = 'Happy'
+user_start_mood_name = 'Angry/Frustrated'
+user_target_mood_name = 'Happy/Excited'
 
 target_mood_code = mood_map[user_target_mood_name]
 
@@ -113,4 +126,4 @@ if model_to_use:
 else:
     print(f"'{user_start_mood_name}' のための訓練済みモデルが見つかりませんでした。")
 
-print("\nステップ 4/4: 全ての処理が完了しました。")
+print("\nステップ 5/5: 全ての処理が完了しました。")
