@@ -3,31 +3,36 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
 
-# Kerasを使って多出力のニューラルネットワークモデルを構築する関数
-def build_model(input_dim, num_start_moods=4, num_end_moods=4):
-    # 入力層を定義（次元数は特徴量の数）
+def build_classification_model(input_dim, num_classes=4):
+    """
+    標準的な多クラス分類（4クラス）のニューラルネットワークモデルを構築する関数。
+    
+    引数:
+        input_dim (int): 入力特徴量の次元数。
+        num_classes (int): 出力クラスの数（ここでは4つの感情）。
+        
+    戻り値:
+        Keras Model: コンパイル済みの分類モデル。
+    """
+    # 入力層
     inputs = Input(shape=(input_dim,), name='main_input')
     
-    # 隠れ層（中間層）を定義。Dropoutで過学習を防ぐ
+    # 隠れ層
     x = Dense(128, activation='relu')(inputs)
     x = Dropout(0.3)(x)
     x = Dense(64, activation='relu')(x)
     x = Dropout(0.3)(x)
     
-    # 出力層を定義
-    outputs = []
-    # 開始感情の数（4つ）だけループし、それぞれに独立した出力層を作成
-    for i in range(num_start_moods):
-        # 各出力層は、終了感情の数（4つ）のユニットを持ち、softmaxで確率を出力
-        output_layer = Dense(num_end_moods, activation='softmax', name=f'start_mood_{i}_output')(x)
-        outputs.append(output_layer)
-        
-    # 入力と複数の出力を結合してモデルを定義
+    # 出力層：単一の出力で、4つのニューロン（クラス数）を持ち、多クラス分類のためにsoftmaxを使用
+    outputs = Dense(num_classes, activation='softmax', name='output')(x)
+    
     model = Model(inputs=inputs, outputs=outputs)
     
-    # モデルのコンパイル。各出力層に categorical_crossentropy損失関数を指定
+    # モデルのコンパイル
+    # ラベル(Y)がone-hotエンコーディングではなく整数（0,1,2,3）であるため、
+    # 損失関数には sparse_categorical_crossentropy を使用する。
     model.compile(optimizer='adam',
-                  loss=['categorical_crossentropy'] * num_start_moods,
-                  metrics=['accuracy'] * num_start_moods)
+                  loss='sparse_categorical_crossentropy',
+                  metrics=['accuracy'])
                   
     return model
