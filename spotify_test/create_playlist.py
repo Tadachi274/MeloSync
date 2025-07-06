@@ -12,8 +12,6 @@ SPOTIPY_REDIRECT_URI = os.getenv('SPOTIPY_REDIRECT_URI')
 SPOTIPY_USERNAME = os.getenv('SPOTIPY_USERNAME')
 
 
-
-
 # Set up the Spotify API client
 sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID,
                                                client_secret=SPOTIPY_CLIENT_SECRET,
@@ -57,4 +55,4 @@ def create_filtered_playlist(original_playlist_id, new_playlist_name):
 if __name__ == '__main__':
     original_playlist_id = '3B9bBOeWrobjNookz6h3cl'  # Replace with the playlist ID you want to copy from
     new_playlist_name = 'Filtered Playlist'  # Replace with the desired name for the new playlist
-    #create_filtered_playlist(original_playlist_id, new_playlist_name)
+    create_filtered_playlist(original_playlist_id, new_playlist_name)
