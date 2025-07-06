@@ -1,1 +1,3 @@
 spotify_test/.env
+.DS_Store
+.cache
