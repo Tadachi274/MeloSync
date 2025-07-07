@@ -37,6 +37,13 @@ CLIENT_SECRET = '你的client_secret'
 # 以降の処理は、変換後のデータを使用
 audio_features_df = fetch_audio_features(df_raw, CLIENT_ID, CLIENT_SECRET, url_col='spotify_url')
 # 元のユーザー遷移データと楽曲の特徴量をマージ
+selected_feature_cols = [
+    'danceability', 'energy', 'loudness', 'speechiness', 'acousticness',
+    'instrumentalness', 'liveness', 'valence', 'tempo', 'key', 'mode'
+]
+
+audio_features_df_selected = audio_features_df[selected_feature_cols + ['track_id']]
+
 df_merged = pd.merge(df_raw, audio_features_df_selected, on='track_id', how='inner')
 df_merged.dropna(subset=selected_feature_cols, inplace=True)
 
