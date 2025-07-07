@@ -2,13 +2,12 @@
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-from tensorflow.keras.models import load_model
-
+import lightgbm as lgb
+import joblib
 # 修正したモジュールをインポート
 from spotify_api import fetch_audio_features
 from feature_engineering import standardize_features, one_hot_encode
 from label_processing import create_target_label_for_start_mood
-from model import build_classification_model
 from recommend import recommend_songs_for_target
 
 # --- 1. データ読み込みとフォーマット変換 ---
@@ -64,11 +63,8 @@ for mood_name, start_mood_code in mood_map.items():
     model_data_df = pd.merge(audio_features_df_selected, labels_df, on='track_id', how='inner')
 
     # 2.3 特徴量エンジニアリング（標準化、One-Hotエンコーディング）
-    numeric_cols = [col for col in selected_feature_cols if col not in ['key', 'mode']]
-    model_data_df, scaler = standardize_features(model_data_df, numeric_cols)
     model_data_df = one_hot_encode(model_data_df, ['key', 'mode'])
     
-    all_scalers[mood_name] = scaler # 後で使用するためにscalerを保存
 
     # 2.4 データセットの分割
     feature_cols = [col for col in model_data_df.columns if col not in ['track_id', 'target_mood']]
@@ -78,15 +74,20 @@ for mood_name, start_mood_code in mood_map.items():
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42, stratify=Y)
 
     # 2.5 モデルの構築と訓練
-    print(f"{mood_name} モデルの訓練準備...")
-    model = build_classification_model(X_train.shape[1], num_classes=len(mood_map))
-    model.fit(X_train, Y_train, epochs=50, batch_size=32, validation_data=(X_test, Y_test), verbose=0) # verbose=0 でログ出力を抑制
+    print(f"{mood_name} LightGBM モデルの訓練準備...")
+    # 初始化 LightGBM 分類器
+    lgbm = lgb.LGBMClassifier(objective='multiclass', num_class=len(mood_map), random_state=42)
+    
+    lgbm.fit(X_train, Y_train,
+             eval_set=[(X_test, Y_test)],
+             eval_metric='multi_logloss')
+             
     print(f"{mood_name} モデルの訓練が完了しました。")
 
     # 2.6 モデルの保存と格納
-    model_path = f"model_{mood_name}.h5"
-    model.save(model_path)
-    trained_models[mood_name] = model
+    model_path = f"model_{mood_name.replace('/', '-')}.joblib"
+    joblib.dump(lgbm, model_path) 
+    trained_models[mood_name] = lgbm
     print(f"モデルを {model_path} に保存しました。")
 
 # --- 4. 推薦の実行例 ---
