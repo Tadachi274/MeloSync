@@ -27,7 +27,7 @@ tasks:
       DB_PORT: '{{.DB_PORT}}'
       PORT: '8080'
     cmds:
-      - python hello.py
+      - DB_HOST=localhost DB_PORT=5433 DB_USER=user DB_PASSWORD=password DB_NAME=devdb go run ./cmd/main.go
 
   install-dev-tools:
     cmds:
@@ -65,7 +65,8 @@ tasks:
     dir: infra/db/seed
     cmds:
       - go mod tidy
-      - go run seed.go
+      - DB_HOST=localhost DB_PORT=5433 DB_USER=user DB_PASSWORD=password DB_NAME=devdb go run seed.go
+
 
 
 
