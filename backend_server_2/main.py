@@ -7,7 +7,6 @@ import joblib
 # 修正したモジュールをインポート
 from spotify_api import fetch_audio_features
 from feature_engineering import standardize_features, one_hot_encode
-from label_processing import create_target_label_for_start_mood
 from recommend import recommend_songs_for_target
 
 # --- 1. データ読み込みとフォーマット変換 ---
@@ -59,28 +58,27 @@ all_scalers = {}
 for mood_name, start_mood_code in mood_map.items():
     print(f"\n--- 開始感情: {mood_name} (コード: {start_mood_code}) の処理中 ---")
 
-    # 2.1 現在の開始感情に対するラベルを作成
-    labels_df = create_target_label_for_start_mood(df_merged, start_mood_code)
+    # 3.1. 現在の「開始感情」に対応するデータをdf_mergedから直接抽出します。
+    model_data_df = df_merged[df_merged['start_mood_encoded'] == start_mood_code].copy()
     
-    if labels_df.empty:
+    # 抽出したデータが空の場合、この感情の訓練をスキップします。
+    if model_data_df.empty:
         print(f"感情 {mood_name} には十分な遷移データがないため、スキップします。")
         continue
 
-    # 2.2 特徴量とラベルをマージし、現在のモデルに必要なデータセットを作成
-    model_data_df = pd.merge(audio_features_df_selected, labels_df, on='track_id', how='inner')
-
-    # 2.3 特徴量エンジニアリング（標準化、One-Hotエンコーディング）
+    # 3.2. 抽出したデータに対して特徴量エンジニアリング（One-Hotエンコーディングのみ）を適用します。
+    #    LightGBMを使用するため、標準化のステップは省略されています。
     model_data_df = one_hot_encode(model_data_df, ['key', 'mode'])
     
 
-    # 2.4 データセットの分割
+    # 3.4 データセットの分割
     feature_cols = [col for col in model_data_df.columns if col not in ['track_id', 'target_mood']]
     X = model_data_df[feature_cols]
     Y = model_data_df['target_mood']
     
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42, stratify=Y)
 
-    # 2.5 モデルの構築と訓練
+    # 3.5 モデルの構築と訓練
     print(f"{mood_name} LightGBM モデルの訓練準備...")
     # 初始化 LightGBM 分類器
     lgbm = lgb.LGBMClassifier(objective='multiclass', num_class=len(mood_map), random_state=42)
