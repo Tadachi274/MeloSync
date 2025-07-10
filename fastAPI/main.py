@@ -4,7 +4,7 @@ from pydantic import BaseModel
 app = FastAPI()
 
 class HeartRate(BaseModel):
-    heartrate: int
+    bpm: float
 
 @app.post("/heartrate")
 async def receive_heartrate(data: HeartRate):
