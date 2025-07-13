@@ -15,7 +15,13 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        manifestPlaceholders["redirectSchemeName"] = "com.example.melosync"
+        manifestPlaceholders["redirectHostName"] = "auth"
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary = true
+        }
     }
 
     buildTypes {
@@ -49,6 +55,12 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    // ViewModel と Navigation
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.navigation.compose)
+    // Spotify 認証ライブラリ
+    implementation(libs.spotify.auth)
+    // テストライブラリ
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
