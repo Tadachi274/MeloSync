@@ -12,6 +12,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.melosync.ui.theme.MeloSyncTheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import com.example.melosync.navigation.AppNavigation
+//import com.example.melosync.ui.theme.SpotifyEmotionAppTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,12 +23,19 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MeloSyncTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    // ナビゲーションを開始
+                    AppNavigation()
                 }
+//                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+//                    Greeting(
+//                        name = "Android",
+//                        modifier = Modifier.padding(innerPadding)
+//                    )
+//                }
             }
         }
     }
