@@ -27,6 +27,11 @@ import com.example.melosync.data.Emotion
 import kotlin.math.roundToInt
 import com.example.melosync.R
 import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.graphics.drawscope.clipPath
 
 @Composable
 fun MainScreen(
@@ -45,6 +50,7 @@ fun MainScreen(
     val currentQuadrant by viewModel.currentQuadrant.collectAsStateWithLifecycle()
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopBarWithEmotion(
                 emotion = emotion,
@@ -147,6 +153,7 @@ fun EmotionGraph(
     onCoordinateChange: (offset: Offset, canvasSizePx: Float, radiusPx: Float) -> Unit
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
+    val imageBitmap = ImageBitmap.imageResource(id = R.drawable.feeling)
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -173,7 +180,22 @@ fun EmotionGraph(
 
             val center = this.center
             val radius = size.minDimension / 2f
-
+            val circlePath = Path().apply {
+                addOval(Rect(center = center, radius = radius))
+            }
+            clipPath(circlePath) {
+                drawImage(
+                    image = imageBitmap,
+                    dstSize = IntSize(
+                        (radius * 2).roundToInt(),
+                        (radius * 2).roundToInt()
+                    ),
+                    dstOffset = IntOffset(
+                        (center.x - radius).roundToInt(),
+                        (center.y - radius).roundToInt()
+                    )
+                )
+            }
             // 円を描画
             drawCircle(
                 color = Color.LightGray,
