@@ -15,6 +15,8 @@ import com.example.melosync.ui.theme.MeloSyncTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import com.example.melosync.navigation.AppNavigation
+import com.example.melosync.ui.theme.AppBackground
+
 //import com.example.melosync.ui.theme.SpotifyEmotionAppTheme
 
 class MainActivity : ComponentActivity() {
@@ -23,19 +25,23 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MeloSyncTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    // ナビゲーションを開始
-                    AppNavigation()
-                }
+                AppBackground {
+
+
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        // ナビゲーションを開始
+                        AppNavigation()
+                    }
 //                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
 //                    Greeting(
 //                        name = "Android",
 //                        modifier = Modifier.padding(innerPadding)
 //                    )
 //                }
+                }
             }
         }
     }
