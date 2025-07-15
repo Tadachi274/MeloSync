@@ -51,6 +51,7 @@ fun MainScreen(
     val emotionCoordinate by viewModel.emotionCoordinate.collectAsStateWithLifecycle()
     val firstEmotionCoordinate by viewModel.firstEmotionCoordinate.collectAsStateWithLifecycle()
     val currentEmotion by viewModel.currentEmotion.collectAsStateWithLifecycle()
+    val pointColor by viewModel.pointColor.collectAsStateWithLifecycle()
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -93,6 +94,7 @@ fun MainScreen(
             EmotionGraph(
                 coordinate = emotionCoordinate,
                 firstCoordinate = firstEmotionCoordinate,
+                pointColor = pointColor,
                 onCoordinateChange = { newOffset, canvasSize, radius ->
                     viewModel.updateCoordinate(newOffset, canvasSize, radius)
                 }
@@ -114,7 +116,7 @@ fun MainScreen(
                     )
                 ) {
                     Icon(
-                        painter = painterResource(id = R.drawable.image),
+                        painter = painterResource(id = R.drawable.change_playlist),
                         contentDescription = "プレイリスト変更",
                         modifier = Modifier.size(ButtonDefaults.IconSize) // デフォルトのアイコンサイズ
                     )
@@ -133,7 +135,7 @@ fun MainScreen(
                     )
                 ) {
                     Icon(
-                        painter = painterResource(id = R.drawable.change_playlist),
+                        painter = painterResource(id = R.drawable.update_playlist),
                         contentDescription = "更新",
                         modifier = Modifier.size(ButtonDefaults.IconSize)
                     )
@@ -199,9 +201,10 @@ fun TopBarWithEmotion(emotion: Emotion, onMenuClick: () -> Unit) {
 fun EmotionGraph(
     coordinate: EmotionCoordinate,
     firstCoordinate: EmotionCoordinate,
+    pointColor: Color,
     onCoordinateChange: (offset: Offset, canvasSizePx: Float, radiusPx: Float) -> Unit
 ) {
-    val primaryColor = MaterialTheme.colorScheme.primary
+//    val primaryColor = MaterialTheme.colorScheme.primary
     val imageBitmap = ImageBitmap.imageResource(id = R.drawable.feeling)
     Box(
         modifier = Modifier
@@ -248,10 +251,11 @@ fun EmotionGraph(
             }
             // 円を描画
             drawCircle(
-                color = Color.LightGray,
+                color = pointColor,
+//                color = Color.LightGray,
                 radius = radius,
                 center = center,
-                style = Stroke(width = 2.dp.toPx())
+//                style = Stroke(width = 2.dp.toPx())
             )
 
             // 十字線を描画
@@ -286,6 +290,7 @@ fun EmotionGraph(
                 center = Offset(pointX, pointY)
             )
             drawCircle(
+//                color = pointColor,
                 color = CurrentPoint,
                 radius = 12.dp.toPx(),
                 center = Offset(pointX, pointY)
