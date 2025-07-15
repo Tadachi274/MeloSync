@@ -60,6 +60,11 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     // Spotify 認証ライブラリ
     implementation(libs.spotify.auth)
+    // Spotify 再生コントロールライブラリ
+//    implementation(libs.spotify.app.remote)
+    // Retrofit (Web API通信用)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.gson)
     // テストライブラリ
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
