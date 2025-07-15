@@ -58,25 +58,25 @@ fun MainScreen(
             )
         }
     ) { paddingValues ->
-        DropdownMenu(
-            expanded = showMenu,
-            onDismissRequest = { showMenu = false }
-        ) {
-            DropdownMenuItem(
-                text = { Text("Spotifyにログイン") },
-                onClick = {
-                    Toast.makeText(context, "ログイン機能は後で実装します", Toast.LENGTH_SHORT).show()
-                    showMenu = false
-                }
-            )
-            DropdownMenuItem(
-                text = { Text("リストの設定") },
-                onClick = {
-                    onNavigateToSettings()
-                    showMenu = false
-                }
-            )
-        }
+//        DropdownMenu(
+//            expanded = showMenu,
+//            onDismissRequest = { showMenu = false }
+//        ) {
+//            DropdownMenuItem(
+//                text = { Text("Spotifyにログイン") },
+//                onClick = {
+//                    Toast.makeText(context, "ログイン機能は後で実装します", Toast.LENGTH_SHORT).show()
+//                    showMenu = false
+//                }
+//            )
+//            DropdownMenuItem(
+//                text = { Text("リストの設定") },
+//                onClick = {
+//                    onNavigateToSettings()
+//                    showMenu = false
+//                }
+//            )
+//        }
 
         Column(
             modifier = Modifier
@@ -163,7 +163,7 @@ fun EmotionGraph(
     ) {
         val density = LocalDensity.current
         var canvasSize by remember { mutableStateOf(0.dp) }
-
+        val radi_rate = 2.5f
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
@@ -171,7 +171,7 @@ fun EmotionGraph(
                     detectDragGestures { change, _ ->
                         // ドラッグ位置をViewModelに通知
                         val canvasSizePx = this.size.width.toFloat()
-                        val radiusPx = canvasSizePx / 2f
+                        val radiusPx = canvasSizePx / radi_rate
                         onCoordinateChange(change.position, canvasSizePx, radiusPx)
                         change.consume()
                     }
@@ -179,7 +179,7 @@ fun EmotionGraph(
         ) {
 
             val center = this.center
-            val radius = size.minDimension / 2f
+            val radius = size.minDimension / radi_rate
             val circlePath = Path().apply {
                 addOval(Rect(center = center, radius = radius))
             }
