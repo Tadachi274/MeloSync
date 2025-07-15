@@ -181,3 +181,9 @@ if __name__ == "__main__":
     df.to_csv("data/processed_music_data.csv", index=False)
     
     
+    
+    # ４つの感情で実用的なのか
+    # 感情を機械化している時点で抽象化してる
+    # 歌詞聞いてる人とか、歌詞聞いてない人もいる。
+    # 歌詞考慮しないと限度ある。
+    
