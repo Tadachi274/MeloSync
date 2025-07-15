@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import get_max_playlist
+from cryptography.fernet import Fernet
 
 load_dotenv()
 
@@ -21,6 +22,9 @@ DB_PORT     = 5433
 DB_NAME     = os.getenv('DB_NAME')
 DB_USER     = os.getenv('DB_USER')
 DB_PASSWORD = os.getenv('DB_PASSWORD')
+
+#鍵の読み込み
+FERNET_KEY = os.getenv('FERNET_KEY')
 
 print(f"DB_HOST={DB_HOST}  DB_PORT={DB_PORT}  DB_USER={DB_USER}  DB_NAME={DB_NAME}")
 
@@ -38,10 +42,20 @@ def fetch_latest_token():
         LIMIT 1
     """)
     access_token, refresh_token, expires_at = cur.fetchone()
+    key= FERNET_KEY.encode('utf-8')
+    access_token = decrypt(key, access_token)
+    refresh_token = decrypt(key, refresh_token)
     print(f"Fetched token: {access_token}, expires at: {expires_at}")
     cur.close()
     conn.close()
     return access_token, refresh_token, expires_at
+
+def decrypt(key: str, data: str):
+    fernet = Fernet(bytes(key, 'utf-8'))
+    decrypted_pass = fernet.decrypt(bytes(data, 'utf-8'))
+    print(decrypted_pass)
+    print(decrypted_pass.decode('utf-8'))
+    return decrypted_pass.decode('utf-8')
 
 def get_spotify_client():
     """DB から取得したトークンを使って Spotipy クライアントを返す"""

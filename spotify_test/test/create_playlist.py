@@ -6,16 +6,15 @@ import os
 # Load environment variables from .env file
 load_dotenv()
 
-SPOTIPY_CLIENT_ID = os.getenv('SPOTIPY_CLIENT_ID')
-SPOTIPY_CLIENT_SECRET = os.getenv('SPOTIPY_CLIENT_SECRET')
-SPOTIPY_REDIRECT_URI = os.getenv('SPOTIPY_REDIRECT_URI')
-SPOTIPY_USERNAME = os.getenv('SPOTIPY_USERNAME')
-
+SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
+SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
+SPOTIFY_REDIRECT_URI = os.getenv('SPOTIFY_REDIRECT_URI')
+SPOTIFY_USERNAME = os.getenv('SPOTIFY_USERNAME')
 
 # Set up the Spotify API client
-sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID,
-                                               client_secret=SPOTIPY_CLIENT_SECRET,
-                                               redirect_uri=SPOTIPY_REDIRECT_URI,
+sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=SPOTIFY_CLIENT_ID,
+                                               client_secret=SPOTIFY_CLIENT_SECRET,
+                                               redirect_uri=SPOTIFY_REDIRECT_URI,
                                                scope="playlist-modify-public playlist-read-private user-library-read user-read-email user-read-private"))
 
 def filter_tracks(tracks):
