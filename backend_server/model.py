@@ -1,3 +1,7 @@
+# predict the probability of mood transition from start_mood to end_mood
+# input: start_mood, end_mood
+# output: probability of mood transition for each mood
+
 # -*- coding: utf-8 -*-
 import pandas as pd
 import numpy as np
