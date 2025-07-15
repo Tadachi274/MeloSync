@@ -168,5 +168,16 @@ def preprocess_music_data(input_csv, output_csv):
 if __name__ == "__main__":
     preprocess_music_data(
         input_csv="data/melosync_music_data.csv",
-        output_csv="data/processed_music_data2.csv"
+        output_csv="data/processed_music_data.csv"
     )
+    
+    # csvファイルのヘッダー並び替えたい
+    # 担当者,アーティスト,曲名（optional）,URL,Happy/Excited,Angry/Frustrated,Tired/Sad,Relax/Chill,ジャンル,id,name,artists,genre,popularity,duration_ms,tempo,key,mode,key_confidence,energy,danceability,valence,instrumentalness,acousticness,loudness,segments_count,segments_avg_duration,beats_count,beats_regularity
+    # →担当者,アーティスト,曲名（optional）,URL,id,name,artists,genre,popularity,duration_ms,tempo,key,mode,key_confidence,energy,danceability,valence,instrumentalness,acousticness,loudness,segments_count,segments_avg_duration,beats_count,beats_regularity,Happy/Excited,Angry/Frustrated,Tired/Sad,Relax/Chill,ジャンル
+    
+    # ヘッダー並び替え
+    df = pd.read_csv("data/processed_music_data.csv")
+    df = df[['担当者', 'アーティスト', '曲名（optional）', 'URL', 'id', 'name', 'artists', 'genre', 'popularity', 'duration_ms', 'tempo', 'key', 'mode', 'key_confidence', 'energy', 'danceability', 'valence', 'instrumentalness', 'acousticness', 'loudness', 'segments_count', 'segments_avg_duration', 'beats_count', 'beats_regularity', 'Happy/Excited', 'Angry/Frustrated', 'Tired/Sad', 'Relax/Chill', 'ジャンル']]
+    df.to_csv("data/processed_music_data.csv", index=False)
+    
+    
