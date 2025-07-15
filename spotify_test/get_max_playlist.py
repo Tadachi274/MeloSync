@@ -17,7 +17,7 @@ sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID,
                                                redirect_uri=SPOTIPY_REDIRECT_URI,
                                                scope="playlist-modify-public playlist-read-private user-library-read user-read-email user-read-private"))
 
-def get_max_playlist_information(username):
+def get_max_playlist_information():
     """
     指定されたユーザーのitem数が最大のプレイリストのIDを取得します。
     """
@@ -27,7 +27,6 @@ def get_max_playlist_information(username):
         print(pl['name'], pl['id'])
     
     # プレイリストをフィルタリング
-    max_playlist_id = None
     max_count = 0
     for pl in playlists['items']:
         name = pl['name']
