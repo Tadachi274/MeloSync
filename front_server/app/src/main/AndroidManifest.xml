@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -22,22 +24,34 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
-<!--        <activity-->
-<!--            android:name="com.spotify.android.auth.LoginActivity"-->
-<!--            android:exported="true"-->
-<!--            android:theme="@android:style/Theme.Translucent.NoTitleBar">-->
+            <!-- Spotify authentication callback -->
 <!--            <intent-filter>-->
 <!--                <action android:name="android.intent.action.VIEW" />-->
 <!--                <category android:name="android.intent.category.DEFAULT" />-->
 <!--                <category android:name="android.intent.category.BROWSABLE" />-->
-<!--                &lt;!&ndash;-->
-<!--                 ★ここにSpotify開発者ダッシュボードで設定したリダイレクトURIを記述します-->
-<!--                 例: <data android:scheme="spotify-emotion-app" android:host="callback" />-->
-<!--                &ndash;&gt;-->
-<!--                <data android:scheme="com.example.melosync" android:host="callback" />-->
+<!--                <data-->
+<!--                    android:host="callback"-->
+<!--                    android:scheme="com.example.melosync" />-->
 <!--            </intent-filter>-->
-<!--        </activity>-->
+        </activity>
+        <activity
+            android:name="com.spotify.sdk.android.auth.LoginActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            tools:replace="android:exported">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!--
+                 ★ここにSpotify開発者ダッシュボードで設定したリダイレクトURIを記述します
+                 例: <data android:scheme="spotify-emotion-app" android:host="callback" />
+                -->
+                <data
+                    android:scheme="com.example.melosync"
+                    android:host="callback" />
+            </intent-filter>
+        </activity>
     </application>
 
 </manifest>

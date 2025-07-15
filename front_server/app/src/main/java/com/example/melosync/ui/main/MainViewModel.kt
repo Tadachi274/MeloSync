@@ -5,7 +5,9 @@ import androidx.compose.ui.geometry.Offset
 //import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import com.example.melosync.data.Emotion
+import com.example.melosync.data.SendEmotion
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -18,10 +20,15 @@ data class EmotionCoordinate(val x: Float, val y: Float)
 class MainViewModel : ViewModel() {
     private val _emotionCoordinate = MutableStateFlow(EmotionCoordinate(0f, 0f))
     val emotionCoordinate = _emotionCoordinate.asStateFlow()
+    private val _firstEmotionCoordinate = MutableStateFlow(EmotionCoordinate(0f, 0f))
+    val firstEmotionCoordinate = _firstEmotionCoordinate.asStateFlow()
+
 
     // 現在の象限を保持する (1, 2, 3, 4 もしくは 0)
-    private val _currentQuadrant = MutableStateFlow(0)
-    val currentQuadrant = _currentQuadrant.asStateFlow()
+    private val _currentEmotion = MutableStateFlow<SendEmotion>(SendEmotion.HAPPY)
+    val currentEmotion : StateFlow<SendEmotion> = _currentEmotion.asStateFlow()
+    private val _firstEmotion = MutableStateFlow<SendEmotion>(SendEmotion.HAPPY)
+    val firstEmotion : StateFlow<SendEmotion> = _firstEmotion.asStateFlow()
 
     fun setEmotion(emotion: Emotion) {
         val x = when (emotion) {
@@ -33,7 +40,9 @@ class MainViewModel : ViewModel() {
         val y = (Random.nextFloat() * 2f - 1f) * 0.7f
 
         _emotionCoordinate.value = EmotionCoordinate(x, y)
+        _firstEmotionCoordinate.value = EmotionCoordinate(x, y)
         updateQuadrant(x, y)
+        _firstEmotion.value = _currentEmotion.value
     }
 
     fun updateCoordinate(rawOffset: Offset, canvasSizePx: Float, radiusPx: Float) {
@@ -66,12 +75,12 @@ class MainViewModel : ViewModel() {
      * 座標から現在の象限を計算します。
      */
     private fun updateQuadrant(x: Float, y: Float) {
-        _currentQuadrant.value = when {
-            x > 0 && y > 0 -> 1
-            x < 0 && y > 0 -> 2
-            x < 0 && y < 0 -> 3
-            x > 0 && y < 0 -> 4
-            else -> 0 // 軸上
+        _currentEmotion.value = when {
+            x > 0 && y > 0 -> SendEmotion.HAPPY
+            x < 0 && y > 0 -> SendEmotion.ANGRY
+            x < 0 && y < 0 -> SendEmotion.SAD
+            x > 0 && y < 0 -> SendEmotion.RELAX
+            else -> SendEmotion.HAPPY // 軸上
         }
     }
 }
