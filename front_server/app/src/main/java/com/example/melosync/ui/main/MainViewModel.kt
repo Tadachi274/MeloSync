@@ -25,9 +25,9 @@ class MainViewModel : ViewModel() {
 
     fun setEmotion(emotion: Emotion) {
         val x = when (emotion) {
-            Emotion.HAPPY -> 0.7f
-            Emotion.NEUTRAL -> 0.0f
-            Emotion.SAD -> -0.7f
+            Emotion.HAPPY -> 0.6f
+            Emotion.NEUTRAL -> 0.2f
+            Emotion.SAD -> -0.6f
         }
         // y座標は-1.0から1.0の間のランダムな値
         val y = (Random.nextFloat() * 2f - 1f) * 0.7f

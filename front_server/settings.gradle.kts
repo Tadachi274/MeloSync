@@ -16,7 +16,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-//        maven { url = uri("https://spotify.github.io/android-sdk/repository") }
+        maven { url = uri("https://spotify.github.io/android-sdk/repository") }
     }
 }
 
