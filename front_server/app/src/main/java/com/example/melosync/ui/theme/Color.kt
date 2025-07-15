@@ -11,6 +11,12 @@ val Purple40 = Color(0xFF7B4E80)
 val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
+val Happy = Color(0x4DFFAA00)
+val Angry = Color(0x4DFF0000)
+val Sad = Color(0x4D0048FF)
+val Relax = Color(0x4D67FF00)
+val Base = Color(0x00FFFFFF)
+
 val PastPoint = Color(0x6B939393)
 val CurrentPoint = Color(0xFFFFFFFF)
 val Shadow = Color(0x5EB9B9B9)
