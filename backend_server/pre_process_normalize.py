@@ -250,16 +250,16 @@ if __name__ == "__main__":
         all_feature_columns = [col for col in df_encoded.columns if col not in emotion_columns]
 
       
-        df_encoded[all_feature_columns + ['Happy/Excited']].to_csv("data/processed_music_data_happy.csv", index=False)
+        df_encoded[all_feature_columns + ['Happy/Excited']].to_csv("data/processed_music_data_happy_normalized_encoded.csv", index=False)
         print("data/processed_music_data_happy.csv を保存しました。")
 
-        df_encoded[all_feature_columns + ['Angry/Frustrated']].to_csv("data/processed_music_data_angry.csv", index=False)
+        df_encoded[all_feature_columns + ['Angry/Frustrated']].to_csv("data/processed_music_data_angry_normalized_encoded.csv", index=False)
         print("data/processed_music_data_angry.csv を保存しました。")
 
-        df_encoded[all_feature_columns + ['Tired/Sad']].to_csv("data/processed_music_data_tired.csv", index=False)
+        df_encoded[all_feature_columns + ['Tired/Sad']].to_csv("data/processed_music_data_tired_normalized_encoded.csv", index=False)
         print("data/processed_music_data_tired.csv を保存しました。")
 
-        df_encoded[all_feature_columns + ['Relax/Chill']].to_csv("data/processed_music_data_relax.csv", index=False)
+        df_encoded[all_feature_columns + ['Relax/Chill']].to_csv("data/processed_music_data_relax_normalized_encoded.csv", index=False)
         print("data/processed_music_data_relax.csv を保存しました。")
     else:
         print("data/processed_music_data_normalized_encoded.csv が見つかりません。正規化とエンコードのステップが完了していることを確認してください。")
