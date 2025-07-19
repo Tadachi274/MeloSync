@@ -16,7 +16,7 @@ android {
         versionName = "1.0"
 
         manifestPlaceholders["redirectSchemeName"] = "com.example.melosync"
-        manifestPlaceholders["redirectHostName"] = "spotify/callback"
+        manifestPlaceholders["redirectHostName"] = "callback"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
