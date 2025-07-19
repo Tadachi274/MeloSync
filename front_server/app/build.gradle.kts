@@ -73,4 +73,24 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+
+    //tadachi
+
+    // Google Sign-In
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
+    // Retrofit + Gson
+    implementation("com.squareup.retrofit2:retrofit:3.0.0")
+    implementation("com.squareup.retrofit2:converter-gson:3.0.0")
+    // OkHttp ログ（任意）
+    implementation("com.squareup.okhttp3:logging-interceptor:5.1.0")
+    implementation("androidx.datastore:datastore-preferences:1.1.7")
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
+    // Jetpack Credentials
+    implementation("androidx.credentials:credentials:1.5.0")
+// Optional: Google Password Manager support on API ≤ 33
+    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
+    // Google の Android Credential Manager 用 ID SDK
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+// GetGoogleIdOption が含まれる :contentReference[oaicite:1]{index=1}
 }
