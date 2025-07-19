@@ -17,13 +17,13 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.melosync.data.Emotion
+import com.example.melosync.ui.theme.*
 import kotlin.math.roundToInt
 import com.example.melosync.R
 import androidx.compose.ui.res.imageResource
@@ -32,6 +32,11 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.res.painterResource
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.font.FontWeight
 
 @Composable
 fun MainScreen(
@@ -47,7 +52,9 @@ fun MainScreen(
     var showMenu by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val emotionCoordinate by viewModel.emotionCoordinate.collectAsStateWithLifecycle()
-    val currentQuadrant by viewModel.currentQuadrant.collectAsStateWithLifecycle()
+    val firstEmotionCoordinate by viewModel.firstEmotionCoordinate.collectAsStateWithLifecycle()
+    val currentEmotion by viewModel.currentEmotion.collectAsStateWithLifecycle()
+    val pointColor by viewModel.pointColor.collectAsStateWithLifecycle()
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -81,24 +88,76 @@ fun MainScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
+                .padding(paddingValues),
+//                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            Text(
+                text =  "なりたい気分にスライドしてね",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(top = 1.dp)
+            )
             // 感情グラフを表示
             EmotionGraph(
                 coordinate = emotionCoordinate,
+                firstCoordinate = firstEmotionCoordinate,
+                pointColor = pointColor,
                 onCoordinateChange = { newOffset, canvasSize, radius ->
                     viewModel.updateCoordinate(newOffset, canvasSize, radius)
                 }
             )
 
+            Row(
+                modifier = Modifier
+//                    .offset(y = (-80).dp)
+//                    .padding(paddingValues)
+//                    .padding(16.dp),
+            ){
+                OutlinedButton(
+                    onClick = {
+                        Toast.makeText(context, "プレイリスト選択は後で実装します", Toast.LENGTH_SHORT).show()
+                    },
+                    // ボタンの色をテーマに合わせて調整
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AppBackground,
+                        contentColor = AppPurple2
+                    )
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.change_playlist),
+                        contentDescription = "プレイリスト変更",
+                        modifier = Modifier.size(ButtonDefaults.IconSize) // デフォルトのアイコンサイズ
+                    )
+                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing)) // アイコンとテキストの間のスペース
+                    Text("プレイリスト変更")
+                }
+
+                // 「更新」ボタン
+                Button(
+                    onClick = {
+                        Toast.makeText(context, "プレイリスト更新は後で実装します", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AppPurple2,
+                        contentColor = AppBackground
+                    )
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.update_playlist),
+                        contentDescription = "更新",
+                        modifier = Modifier.size(ButtonDefaults.IconSize)
+                    )
+                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                    Text("更新")
+                }
+            }
+
             // 現在の象限を表示
             Text(
-                text = if (currentQuadrant != 0) "第 $currentQuadrant 象限" else "軸上",
+                text =  currentEmotion.name,
                 style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(top = 16.dp)
+//                modifier = Modifier.padding(top = 16.dp)
             )
 
             Spacer(modifier = Modifier.weight(1f))
@@ -114,7 +173,6 @@ fun MainScreen(
 @Composable
 fun TopBarWithEmotion(emotion: Emotion, onMenuClick: () -> Unit) {
     var offsetX by remember { mutableStateOf(0f) }
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -150,20 +208,26 @@ fun TopBarWithEmotion(emotion: Emotion, onMenuClick: () -> Unit) {
 @Composable
 fun EmotionGraph(
     coordinate: EmotionCoordinate,
+    firstCoordinate: EmotionCoordinate,
+    pointColor: Color,
     onCoordinateChange: (offset: Offset, canvasSizePx: Float, radiusPx: Float) -> Unit
 ) {
-    val primaryColor = MaterialTheme.colorScheme.primary
+//    val primaryColor = MaterialTheme.colorScheme.primary
     val imageBitmap = ImageBitmap.imageResource(id = R.drawable.feeling)
+    val textMeasurer = rememberTextMeasurer()
+    val textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold )
     Box(
         modifier = Modifier
-            .fillMaxWidth()
+//            .offset(y = (-40).dp)
+            .fillMaxWidth(0.9f)
             .aspectRatio(1f) // 正方形を維持
-            .padding(16.dp),
+            .padding(start = 16.dp, end = 16.dp),
         contentAlignment = Alignment.Center
     ) {
         val density = LocalDensity.current
         var canvasSize by remember { mutableStateOf(0.dp) }
-        val radi_rate = 2.5f
+        val radi_rate = 2.7f
+
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
@@ -198,10 +262,11 @@ fun EmotionGraph(
             }
             // 円を描画
             drawCircle(
-                color = Color.LightGray,
+                color = pointColor,
+//                color = Color.LightGray,
                 radius = radius,
                 center = center,
-                style = Stroke(width = 2.dp.toPx())
+//                style = Stroke(width = 2.dp.toPx())
             )
 
             // 十字線を描画
@@ -217,14 +282,52 @@ fun EmotionGraph(
                 end = Offset(center.x, center.y + radius),
                 strokeWidth = 2.dp.toPx()
             )
+            val textOffset = 20.dp.toPx() // 円の外側の余白
+            drawText(
+                textMeasurer = textMeasurer,
+                text = "快適",
+                style = textStyle,
+                topLeft = Offset(center.x + radius + 5.dp.toPx(), center.y - 10.dp.toPx()) // 右
+            )
+            drawText(
+                textMeasurer = textMeasurer,
+                text = "不快",
+                style = textStyle,
+                topLeft = Offset(center.x - radius - 35.dp.toPx(), center.y - 10.dp.toPx()) // 左
+            )
+            drawText(
+                textMeasurer = textMeasurer,
+                text = "落ち着いている",
+                style = textStyle,
+                topLeft = Offset(center.x - 49.dp.toPx(), center.y + radius + 3.dp.toPx()) // 下
+            )
+            drawText(
+                textMeasurer = textMeasurer,
+                text = "興奮",
+                style = textStyle,
+                topLeft = Offset(center.x - 15.dp.toPx(), center.y - radius - 21.dp.toPx()) // 上
+            )
 
             // 感情の位置を計算 (-1.0f ~ 1.0f の座標をCanvasの座標に変換)
             val pointX = center.x + coordinate.x * radius
             val pointY = center.y - coordinate.y * radius // Y軸は下がプラスなので反転
 
+            val constPointX = center.x + firstCoordinate.x * radius
+            val constPointY = center.y - firstCoordinate.y * radius // Y軸は下がプラスなので反転
             // 感情の位置に点を描画
             drawCircle(
-                color = primaryColor,
+                color = PastPoint,
+                radius = 12.dp.toPx(),
+                center = Offset(constPointX, constPointY)
+            )
+            drawCircle(
+                color = Shadow,
+                radius = 14.dp.toPx(),
+                center = Offset(pointX, pointY)
+            )
+            drawCircle(
+//                color = pointColor,
+                color = CurrentPoint,
                 radius = 12.dp.toPx(),
                 center = Offset(pointX, pointY)
             )
