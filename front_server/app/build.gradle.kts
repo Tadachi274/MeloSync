@@ -16,7 +16,7 @@ android {
         versionName = "1.0"
 
         manifestPlaceholders["redirectSchemeName"] = "com.example.melosync"
-        manifestPlaceholders["redirectHostName"] = "auth"
+        manifestPlaceholders["redirectHostName"] = "callback"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -34,14 +34,17 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.15"
     }
 }
 
@@ -74,9 +77,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-
-    //tadachi
-
     // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:21.3.0")
     // Retrofit + Gson
@@ -88,9 +88,9 @@ dependencies {
     implementation("com.google.android.gms:play-services-auth:21.3.0")
     // Jetpack Credentials
     implementation("androidx.credentials:credentials:1.5.0")
-// Optional: Google Password Manager support on API ≤ 33
+    // Optional: Google Password Manager support on API ≤ 33
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
     // Google の Android Credential Manager 用 ID SDK
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
-// GetGoogleIdOption が含まれる :contentReference[oaicite:1]{index=1}
+    // GetGoogleIdOption が含まれる :contentReference[oaicite:1]{index=1}
 }
