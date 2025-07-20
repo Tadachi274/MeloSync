@@ -9,6 +9,6 @@ data class IdTokenRequest(val id_token: String)
 data class JwtResponse(val access_token: String)
 
 interface AuthApi {
-    @POST("auth/google-login")
+    @POST("api/auth/google-login")
     suspend fun exchangeIdToken(@Body req: IdTokenRequest): Response<JwtResponse>
 }

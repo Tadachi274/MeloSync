@@ -14,14 +14,22 @@ import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun LoginScreen(viewModel: AuthViewModel,modifier: Modifier = Modifier) {
-    println(2)
-    val value = 2
+    // ViewModel の UI 状態を監視
+    val uiState by viewModel.uiState.collectAsState()
+
+    val context = LocalContext.current
+    // エラーが出たらトースト表示
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+        }
+    }
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        when(value) {
-            0 -> {
+        when {
+            uiState.isLoading -> {
                 CircularProgressIndicator()
             }
-            1 -> {
+            uiState.isLoggedIn -> {
                 Text("ログイン済みです")
             }
             else -> {
