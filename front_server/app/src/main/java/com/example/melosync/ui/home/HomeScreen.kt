@@ -22,6 +22,9 @@ import com.example.melosync.data.Emotion
 
 import com.example.melosync.ui.auth.LoginScreen
 import com.example.melosync.ui.auth.AuthViewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.example.melosync.ui.auth.LogoutButton
 
 @Composable
 fun HomeScreen(
@@ -30,10 +33,10 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel() ,
     authViewModel: AuthViewModel = viewModel()
 ) {
+    // ログイン状態を監視
+    val uiState by authViewModel.uiState.collectAsState()
 
-    println(0)
-    if (true) {
-        println(1)
+    if (!uiState.isLoggedIn) {
         LoginScreen(viewModel = authViewModel)
         return
     }
@@ -69,6 +72,7 @@ fun HomeScreen(
                     )
                 }
             }
+            LogoutButton { authViewModel.logout() }
         }
     }
 }
