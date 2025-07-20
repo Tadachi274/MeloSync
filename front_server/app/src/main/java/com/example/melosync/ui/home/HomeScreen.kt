@@ -20,13 +20,24 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.melosync.data.Emotion
 
+import com.example.melosync.ui.auth.LoginScreen
+import com.example.melosync.ui.auth.AuthViewModel
 
 @Composable
 fun HomeScreen(
     // 感情が選択されたら、その情報を元に次の画面へ遷移する
     onNavigateToMain: (Emotion) -> Unit,
-    viewModel: HomeViewModel = viewModel()
+    viewModel: HomeViewModel = viewModel() ,
+    authViewModel: AuthViewModel = viewModel()
 ) {
+
+    println(0)
+    if (true) {
+        println(1)
+        LoginScreen(viewModel = authViewModel)
+        return
+    }
+
     Scaffold { paddingValues ->
         Column(
             modifier = Modifier
