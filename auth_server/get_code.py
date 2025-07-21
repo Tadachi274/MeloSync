@@ -8,6 +8,7 @@ app = FastAPI()
 def login():
     client_id = 'ced2ee375b444183a40d0a95de22d132'
     redirect_uri = 'http://127.0.0.1:8000/melosync/callback'
+    #redirect_uri = 'com.example.melosync://callback'
     scope = "playlist-modify-public playlist-read-private"
     state = "random_state_string"
     auth_url = (
