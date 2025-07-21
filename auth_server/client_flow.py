@@ -24,7 +24,7 @@ def obtain_spotify_code():
     """
     /login を開いて Spotify 認可 → ブラウザに出る JSON から code をコピーして貼り付け
     """
-    login_url = f"{SPOTIFY_BASE}/login"
+    login_url = f"{SPOTIFY_BASE}/api/spotify/login"
     print("Opening Spotify login page in your browser...")
     webbrowser.open(login_url)
     print("After you authorize, your browser will show JSON including “authorization_code”.")

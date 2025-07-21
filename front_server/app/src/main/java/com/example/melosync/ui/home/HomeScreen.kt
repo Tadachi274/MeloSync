@@ -24,19 +24,24 @@ import com.example.melosync.ui.auth.LoginScreen
 import com.example.melosync.ui.auth.AuthViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import com.example.melosync.ui.auth.AuthRepository
 import com.example.melosync.ui.auth.LogoutButton
 
 @Composable
 fun HomeScreen(
     // 感情が選択されたら、その情報を元に次の画面へ遷移する
-    onNavigateToMain: (Emotion) -> Unit,
+    onNavigateToMain: (Emotion) -> Unit={},
     viewModel: HomeViewModel = viewModel() ,
-    authViewModel: AuthViewModel = viewModel()
+    authViewModel: AuthViewModel
 ) {
     // ログイン状態を監視
     val uiState by authViewModel.uiState.collectAsState()
 
-    if (!uiState.isLoggedIn) {
+    println("[HomeScreen]isLoggedIn:${uiState.isLoggedIn}")
+    println("[HomeScreen]isSpotifyLoggedIn:${uiState.isSpotifyLoggedIn}")
+    println(!uiState.isLoggedIn && !uiState.isSpotifyLoggedIn)
+
+    if (!uiState.isLoggedIn || !uiState.isSpotifyLoggedIn) {
         LoginScreen(viewModel = authViewModel)
         return
     }

@@ -10,6 +10,8 @@ import com.example.melosync.data.Emotion
 import com.example.melosync.ui.home.HomeScreen
 import com.example.melosync.ui.main.MainScreen
 
+import com.example.melosync.ui.auth.AuthViewModel
+
 // 画面遷移のルートを定義
 object Routes {
     const val HOME = "home"
@@ -19,8 +21,9 @@ object Routes {
 }
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(authViewModel: AuthViewModel) {
     val navController = rememberNavController()
+
 
     NavHost(
         navController = navController,
@@ -32,7 +35,8 @@ fun AppNavigation() {
                 onNavigateToMain = { emotion ->
                     // Main画面へ遷移。感情のenum名を渡す
                     navController.navigate("main/${emotion.name}")
-                }
+                },
+                authViewModel = authViewModel
             )
         }
 
