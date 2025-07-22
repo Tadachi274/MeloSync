@@ -17,12 +17,14 @@ import androidx.compose.material3.Surface
 import com.example.melosync.navigation.AppNavigation
 import com.example.melosync.ui.theme.AppBackground
 import androidx.activity.viewModels
+import com.example.melosync.ui.auth.AuthRepository
 import com.example.melosync.ui.auth.AuthViewModel
 
 //import com.example.melosync.ui.theme.SpotifyEmotionAppTheme
 
 class MainActivity : ComponentActivity() {
     private val authViewModel: AuthViewModel by viewModels()
+    val repository by lazy { AuthRepository(applicationContext) }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -36,7 +38,7 @@ class MainActivity : ComponentActivity() {
                         color = MaterialTheme.colorScheme.background
                     ) {
                         // ナビゲーションを開始
-                        AppNavigation(authViewModel)
+                        AppNavigation(authViewModel,repository)
                     }
 //                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
 //                    Greeting(
