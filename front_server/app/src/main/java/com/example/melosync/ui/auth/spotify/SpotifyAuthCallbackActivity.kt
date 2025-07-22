@@ -42,19 +42,19 @@ class SpotifyAuthCallbackActivity : ComponentActivity() {
 
         if (code != null) {
             Log.d(TAG, "認証コード(code) = $code")
-            if (code != null) {
-                authViewModel.onSpotifyAuthCodeReceived(code)          // ※2
+            //if (code != null) {
+            //    authViewModel.onSpotifyAuthCodeReceived(code)          // ※2
+            //}
+            lifecycleScope.launch {
+                val jwt = repository.getJwt()  // suspend 関数なので coroutine 内で呼び出し
+                Log.d(TAG,"jwt:${jwt}")
+                if (!jwt.isNullOrEmpty()) {
+                    Log.d(TAG,"sendCode" )
+                    sendCodeAndJwtToBackend(code, jwt)
+                } else {
+                    Log.e("SpotifyAuth", "No JWT found")
+                }
             }
-            //lifecycleScope.launch {
-            //    val jwt = repository.getJwt()  // suspend 関数なので coroutine 内で呼び出し
-            //    Log.d(TAG,"jwt:${jwt}")
-            //    if (!jwt.isNullOrEmpty()) {
-            //        Log.d(TAG,"sendCode" )
-            //        sendCodeAndJwtToBackend(code, jwt)
-           //     } else {
-           //         Log.e("SpotifyAuth", "No JWT found")
-            //    }
-           // }
         }
         else {
             Log.e(TAG, "認証エラー(error) = $error")
