@@ -111,6 +111,7 @@ async def spotify_callback(
 
         # これでバックエンドはユーザーのプレイリストを取得できる
         playlists = get_user_playlists(access_token)
+        print(playlists)
 
         return {"status": "success", "playlists": playlists}
 
@@ -138,6 +139,7 @@ def save_tokens_to_db(user_id: str, access_token: str, refresh_token: str, expir
     """
     ユーザーのアクセストークンとリフレッシュトークンをデータベースに保存する関数
     """
+    print(f"Saving tokens for user_id: {user_id}")
 
     conn = psycopg2.connect(
         host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
