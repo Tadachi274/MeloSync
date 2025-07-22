@@ -7,6 +7,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.melosync.data.Emotion
+import com.example.melosync.ui.auth.AuthRepository
 import com.example.melosync.ui.home.HomeScreen
 import com.example.melosync.ui.main.MainScreen
 
@@ -21,7 +22,7 @@ object Routes {
 }
 
 @Composable
-fun AppNavigation(authViewModel: AuthViewModel) {
+fun AppNavigation(authViewModel: AuthViewModel,repository: AuthRepository) {
     val navController = rememberNavController()
 
 
@@ -36,7 +37,8 @@ fun AppNavigation(authViewModel: AuthViewModel) {
                     // Main画面へ遷移。感情のenum名を渡す
                     navController.navigate("main/${emotion.name}")
                 },
-                authViewModel = authViewModel
+                authViewModel = authViewModel,
+                repository = repository
             )
         }
 

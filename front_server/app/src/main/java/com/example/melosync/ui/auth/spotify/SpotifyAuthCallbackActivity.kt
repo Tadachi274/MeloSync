@@ -80,7 +80,7 @@ class SpotifyAuthCallbackActivity : ComponentActivity() {
                     // 必要ならここで UI 更新や次画面遷移などを行う
                     lifecycleScope.launch {
                         repository.setSpotifyLoggedIn(true)
-                        Log.d(TAG,"${repository.getSpotifyLoggedIn()}")
+                        Log.d(TAG,"SpotifyLoggedIn:${repository.getSpotifyLoggedIn()}")
                         // 必要に応じて JWT も保存
                     }
                     startActivity(
