@@ -1,0 +1,39 @@
+# macOS の場合（`open` コマンドでURLを開く例）
+export SPOTIPY_CLIENT_ID='ced2ee375b444183a40d0a95de22d132'
+export SPOTIPY_REDIRECT_URI='http://127.0.0.1:8000/melosync/callback'
+export SCOPE="playlist-modify-public playlist-read-private"
+open "https://accounts.spotify.com/authorize?client_id='ced2ee375b444183a40d0a95de22d132'&response_type=code&redirect_uri='http://127.0.0.1:8000/melosync/callback'&scope='playlist-modify-public playlist-read-private'"
+
+
+http://127.0.0.1:8000/melosync/callback?
+code=AQAISsjrpvVOut5FT03TWA40CvFrZwDNvfJcxmkp2APgv7FDu0A2cexUq7mSmI6hbd8jkDfiKafbvZfl-20SZHL1SysOsfBR2fI_dc6wxSlcQ67S6ILKez151EaRunEeXjKukiEQ7Vslc2Rb20_ywB23qkKG96CSone3nn3uYE6hZHM9MKYkvTE6ARtZom8Tg_65N1E-IsHWPQFVtjTBvU3KWXjn8rwWTQndOaBx0zDYO2QP0cCf0VCw
+&state=random_state_string
+
+＃JWT取得
+uvicorn return_jwt:app \  --reload \
+  --host 0.0.0.0 \
+  --port 8000
+
+export JWT=$(curl -s -X POST http://localhost:8000/auth/google-login \
+  -H "Content-Type: application/json" \
+  -d '{"id_token":"<NEW_GOOGLE_ID_TOKEN>"}' \
+  | jq -r .access_token)
+
+export JWT='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZXhhbXBsZV91c2VyX2lkIiwiZXhwIjoxNzUyNTc3MTI0fQ.YdSjFztuDw_1Sy-ydx_bFAHaCN_JDa-HmZ3fTNw5vrQ'
+export CODE='AQAiLwXqE2SRAlT8ny077HhufN0x1k9P5APScSU_yXLRbWSlLKvTkyYd2MoIor6uaFpTxMmhyn73o33UQApaMP1ytCVjPalRxjmwIC8X3jt0ec18mHr8nupAp1-7GW1FdFLW57msmlvwaErZ4yZ7L_3cwMYxE5E4qd9XrnrsorUwmsaN40lSBh5I-hinDoE0u4pOrz3T2_soNFXS75ElNDLal4mU3635KnahONULB8UK1DIJd-0L99NS'
+
+&state=random_state_string
+&state=random_state_string
+echo "New JWT: $JWT"
+
+＃Code取得
+uvicorn get_code:app \
+  --reload \
+  --host 127.0.0.1 \
+  --port 8000
+
+http://127.0.0.1:8000/login
+
+export CODE='AQADHbJE0d6HXv9CJW_V8kftM2fNny79RUSXqlZXt0vwhqVtUYXTLYacXLIF5GGysNEZ-8JMnA3i13oqXnCpb1_MaftEM3MDwNLm67pHEvyGUEhfVyrtDS6AQSCxCkC-K5acJBNiBiHaBTSqXMag1fOPVLZxl6OQo2fO-ARZ3l9GFsYLBeEJQURrMW4va3bqxvNFqFEvEWjDFnMRiFjUnjWNMRdP_4t9kmS9llkqDnMDS-wlwvntZ2-_'
+
+echo "Code: $CODE"

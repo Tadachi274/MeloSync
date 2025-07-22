@@ -1,256 +1,130 @@
-# MeloSync Music Classification Model
+# 感情転移に基づく音楽推薦システム
 
-音楽データを使用した教師あり学習による曲の分類モデルです。Spotify APIを使用して取得した音声特徴量から、曲の感情カテゴリを予測します。
+## 1. 概要
 
-## 概要
+多くの人々は、気分を管理したり、特定の感情状態に至るために音楽を聴きます。このプロジェクトは、単に「幸せな曲」を推薦するのではなく、「ユーザーが現在の感情（例：悲しみ）から目標の感情（例：リラックス）へ移る」ことを統計的に助ける確率が最も高い楽曲を推薦することを目的とした、高度な推薦システムです。
 
-このプロジェクトは、以下の機能を提供します：
+Spotify APIから取得した楽曲のオーディオ特徴量を入力とし、ユーザーの聴取ログから生成した「感情転移確率」を教師データとして、多出力ニューラルネットワークを学習させることで、この機能を実現します。
 
-- **Spotify特徴量抽出器** (`spotify_feature_extractor.py`): Spotify APIを使用して曲の音声特徴量を取得
-- **感情分類モデル** (`emotion_classifier.py`): Spotify特徴量から感情カテゴリを予測
-- **基本的な分類モデル** (`main.py`): シンプルな特徴量エンジニアリングと複数の機械学習アルゴリズム
-- **高度な分類モデル** (`advanced_classifier.py`): 高度な特徴量エンジニアリング、ハイパーパラメータチューニング、アンサンブル学習
+**使用技術:** Python, Pandas, Scikit-learn, TensorFlow (Keras), Spotipy
 
-## データセット
+---
 
-`melosync_music_data.csv` には以下の情報が含まれています：
+## 2. システムの核となる概念：感情転移行列
 
-- **担当者**: データを入力した人
-- **アーティスト**: アーティスト名
-- **曲名**: 曲のタイトル
-- **URL**: Spotifyのリンク
-- **感情カテゴリ**: Happy/Excited, Angry/Frustrated, Tired/Sad, Relax/Chill
-- **ジャンル**: 曲のジャンル分類（応援ソング、恋愛ソング、失恋ソングなど）
+このシステムの最もユニークな特徴は、各楽曲に**4x4の感情転移確率行列**をラベルとして定義することです。
 
-## Spotify API特徴量
+-   **行列の構造**:
+    -   **行**: 音楽を聴き始める前の「開始感情」（0: Angry, 1: Happy, 2: Relaxed, 3: Sad）
+    -   **列**: 音楽を聴き終えた後の「終了感情」（0: Angry, 1: Happy, 2: Relaxed, 3: Sad）
+    -   **値**: その曲を聴いた結果、行の感情から列の感情へ遷移する確率。
 
-Spotify APIから取得される音声特徴量：
+-   **具体例**:
+    -   ある曲の行列で、`matrix[3][1]` の値が `0.7` であった場合、それは「悲しい(Sad)時にその曲を聴くと、70%の確率で幸せ(Happy)な気分になる」ことを意味します。
 
-- **danceability**: ダンス性（0-1）
-- **energy**: エネルギー（0-1）
-- **valence**: 明るさ（0-1）
-- **tempo**: テンポ（BPM）
-- **loudness**: 音量（dB）
-- **acousticness**: アコースティック性（0-1）
-- **instrumentalness**: 器楽性（0-1）
-- **liveness**: ライブ性（0-1）
-- **speechiness**: 話声性（0-1）
-- **mode**: 調性（0=短調, 1=長調）
-- **key**: 調（0-11）
-- **time_signature**: 拍子記号
-- **popularity**: 人気度（0-100）
-- **duration_ms**: 長さ（ミリ秒）
-- **explicit**: 露骨な内容（0-1）
+-   **生成方法**:
+    -   この行列は、`label_processing.py` によって、多数のユーザーから集めた「この曲を聴いたら、この感情からこの感情に変わった」という遷移ログを集計し、各開始感情ごとに確率（合計が1になるよう）を正規化することで生成されます。
 
-## 特徴量
+---
 
-### Spotify特徴量抽出器 (`spotify_feature_extractor.py`)
-- Spotify APIから取得される音声特徴量（上記参照）
-- ピッチ、ティムブレの統計量
-- セグメント、セクション数
+## 3. システムアーキテクチャと処理フロー
 
-### 感情分類モデル (`emotion_classifier.py`)
-- Spotify音声特徴量
-- 各感情カテゴリ（Happy/Excited, Angry/Frustrated, Tired/Sad, Relax/Chill）を予測
+本システムは `main.py` をエントリーポイントとして、以下のステップで処理が実行されます。
 
-### 基本モデル (`main.py`)
-- アーティスト名（エンコード済み）
-- 曲名の長さ
-- URLの長さ
-- 各感情カテゴリ（エンコード済み）
+1.  **データ収集 (`main.py`)**
+    -   ユーザーの感情遷移ログ（開始感情、終了感情、Spotify URL）が含まれる`melosync_music_data.csv`を読み込みます。
 
-### 高度なモデル (`advanced_classifier.py`)
-- アーティスト関連: アーティスト名、アーティストごとの曲数
-- 感情関連: 感情の多様性、主要感情、感情パターン
-- テキスト関連: 曲名の長さ、単語数、特殊文字数
-- URL関連: URLの長さ、パラメータの有無
-- ジャンル関連: ジャンルの出現頻度
-- 組み合わせ特徴量: アーティスト×ジャンル、感情パターン
+2.  **特徴量取得 (`spotify_api.py`)**
+    -   CSV内のSpotify URLを基に、Spotify APIへアクセスし、各楽曲のダンス可能性、エネルギー、テンポなどのオーディオ特徴量を取得します。
 
-## 使用アルゴリズム
+3.  **ラベル生成 (`label_processing.py`)**
+    -   収集した遷移ログを基に、システムの核である「4x4感情転移確率行列」を楽曲ごとに計算し、モデルの教師データ（正解ラベル）を生成します。
 
-### Spotify特徴量抽出器
-- Spotify Web API
-- 音声分析API
+4.  **特徴量エンジニアリング (`feature_engineering.py`)**
+    -   取得したオーディオ特徴量をモデルが学習しやすい形式に変換します。数値データは標準化（StandardScaler）し、キーなどのカテゴリデータはワンホットエンコーディングします。
 
-### 感情分類モデル
-- Random Forest
-- Gradient Boosting
-- XGBoost
-- LightGBM
-- SVM
-- アンサンブルモデル（Voting Classifier）
+5.  **モデル学習 (`model.py`)**
+    -   加工された特徴量を入力（X）、生成された感情転移確率を入力（Y）として、多出力ニューラルネットワークを学習させます。モデルは、楽曲の特徴からその曲が持つ感情遷移の可能性を予測できるように訓練されます。
 
-### 基本モデル
-- Random Forest
-- Gradient Boosting
-- Logistic Regression
-- SVM
+6.  **推薦生成 (`recommend.py`)**
+    -   学習済みモデルを利用します。ユーザーが現在の`start_mood`と目標の`target_mood`を指定すると、システムは全楽曲に対してその遷移確率を予測し、確率が最も高い順に楽曲を推薦します。
 
-### 高度なモデル
-- Random Forest（ハイパーパラメータチューニング付き）
-- Gradient Boosting（ハイパーパラメータチューニング付き）
-- XGBoost（ハイパーパラメータチューニング付き）
-- LightGBM
-- SVM
-- アンサンブルモデル（Voting Classifier）
+---
 
-## インストール
+## 4. ディレクトリ構成
+backend_server/
+├─ data/                   # (入力) melosync_music_data.csv などのデータセットを格納
+├─ spotify_api.py          # Spotify APIからオーディオ特徴量を取得するモジュール
+├─ feature_engineering.py  # 特徴量の標準化やエンコーディングを行うモジュール
+├─ label_processing.py     # 感情転移確率行列（ラベル）を生成するコアモジュール
+├─ model.py                # 多出力ニューラルネットワークモデルを定義するモジュール
+├─ recommend.py            # 学習済みモデルを使い、楽曲を推薦するロジックを実装
+├─ main.py                 # 全ての処理フローを制御するメインスクリプト
+├─ requirements.txt        # プロジェクトの依存ライブラリ一覧
+└─ README.md               # このファイル
 
-1. 必要なライブラリをインストール：
-```bash
-pip install -r requirements.txt
-```
+---
 
-2. Spotify API認証情報を設定：
-```bash
-export SPOTIFY_CLIENT_ID='your_client_id'
-export SPOTIFY_CLIENT_SECRET='your_client_secret'
-```
+## 5. セットアップと実行方法
 
-Spotify API認証情報の取得方法：
-1. [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) にアクセス
-2. アプリケーションを作成
-3. Client IDとClient Secretを取得
+### 前提条件
+-   Python 3.8 以降
 
-## 使用方法
+### インストール手順
 
-### 1. Spotify特徴量の抽出
-```bash
-python spotify_feature_extractor.py
-```
+1.  **リポジトリをクローン:**
+    ```bash
+    git clone [https://github.com/your-username/your-repository.git](https://github.com/your-username/your-repository.git)
+    cd backend_server
+    ```
 
-### 2. 感情分類モデルの実行
-```bash
-python emotion_classifier.py
-```
+2.  **依存ライブラリのインストール:**
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-### 3. 基本モデルの実行
-```bash
-python main.py
-```
+### 設定
 
-### 4. 高度なモデルの実行
-```bash
-python advanced_classifier.py
-```
+1.  **Spotify API認証情報の設定**
+    -   Spotify Developer Dashboard (https://developer.spotify.com/dashboard/) でアプリケーションを作成し、`Client ID` と `Client Secret` を取得します。
+    -   `main.py` ファイルを開き、取得した情報を以下のように設定します。
+    ```python
+    # main.py
+    CLIENT_ID = 'あなたのClient IDをここにペースト'
+    CLIENT_SECRET = 'あなたのClient Secretをここにペースト'
+    ```
 
-## 出力ファイル
+2.  **入力データの配置**
+    -   `data` ディレクトリ内に、感情遷移ログを含む `melosync_music_data.csv` ファイルを配置してください。
 
-実行後、以下のファイルが生成されます：
+### 実行
 
-### Spotify特徴量抽出器
-- `melosync_music_data_with_spotify_features.csv`: Spotify特徴量を含む拡張データ
-- `failed_tracks.csv`: 特徴量取得に失敗したトラックのリスト
+-   全ての設定が完了したら、以下のコマンドでプロジェクトを実行します。
+    ```bash
+    python main.py
+    ```
+-   実行すると、コンソールにAPIからのデータ取得状況、モデルの学習過程、そして最後に推薦結果の例が出力されます。
 
-### 感情分類モデル
-- `emotion_correlation.png`: 感情カテゴリ間の相関
-- `emotion_model_comparison.png`: 各感情カテゴリのモデル性能比較
-- `confusion_matrix_*.png`: 各感情カテゴリの混同行列
-- `feature_importance_*.png`: 各感情カテゴリの特徴量重要度
+---
 
-### 基本モデル
-- `emotion_distribution.png`: 感情カテゴリの分布
-- `model_comparison.png`: モデル性能比較
-- `confusion_matrix.png`: 混同行列
-- `feature_importance.png`: 特徴量重要度
+## 6. 各モジュールの詳細解説
 
-### 高度なモデル
-- `advanced_model_comparison.png`: 詳細なモデル性能比較
-- `advanced_confusion_matrix.png`: 詳細な混同行列
-- `advanced_feature_importance.png`: 詳細な特徴量重要度
-- `feature_correlation.png`: 特徴量間の相関行列
+-   **`main.py`**
+    -   プロジェクト全体のオーケストレーター。データ読み込みから、特徴量取得、モデル学習、最終的な推薦まで、各モジュールを正しい順序で呼び出す役割を担います。
 
-## 評価指標
+-   **`spotify_api.py`**
+    -   `spotipy`ライブラリの中核。`fetch_audio_features`関数は、APIへの過負荷を避けるためのバッチ処理と、一時的なエラーに対応するための再試行ロジックを備えています。
 
-- **精度 (Accuracy)**: 全体の正解率
-- **F1スコア**: 精度と再現率の調和平均
-- **クロスバリデーション**: 5分割交差検証
-- **混同行列**: 各クラスごとの予測結果
+-   **`label_processing.py`**
+    -   `pandas`の強力なデータ操作機能（特に`groupby().unstack()`）を活用し、生の遷移ログからクリーンな確率行列（モデルの教師データ）を生成する、本プロジェクトで最も重要なデータ処理モジュールです。
 
-## 予測機能
+-   **`feature_engineering.py`**
+    -   機械学習の前処理におけるベストプラクティスを実装。`StandardScaler`は特徴量間のスケールの違いを吸収し、モデルの学習を安定させます。`one-hot_encode`は、数値的な順序関係のないカテゴリデータをモデルが扱える形式に変換します。
 
-### 感情分類モデル
-新しい曲の感情カテゴリを予測する機能：
+-   **`model.py`**
+    -   TensorFlow/Kerasを用いてニューラルネットワークを定義。この問題は「1つの入力から4つの異なる確率分布を予測する」ため、4つの独立した`softmax`活性化関数を持つ出力層で構成される**多出力モデル**が採用されています。`Dropout`層は、モデルが訓練データに過剰に適合（過学習）するのを防ぎます。
 
-```python
-# Spotify特徴量から感情を予測
-sample_features = {
-    'danceability': 0.8,
-    'energy': 0.9,
-    'valence': 0.7,
-    'tempo': 120,
-    'loudness': -5.0,
-    'acousticness': 0.1,
-    'instrumentalness': 0.0,
-    'liveness': 0.3,
-    'speechiness': 0.1,
-    'mode': 1,
-    'key': 5,
-    'time_signature': 4,
-    'popularity': 80,
-    'duration_ms': 180000,
-    'explicit': 0
-}
+-   **`recommend.py`**
+    -   シンプルかつ効果的な推薦ロジック。`model.predict()`で得られる予測結果（4つの出力層からのリスト）から、ユーザーの`start_mood`に対応する部分だけを選択し、その中で`target_mood`の確率が最も高いものを探します。
 
-predictions, probabilities = classifier.predict_emotions(sample_features)
-```
-
-### 基本モデル
-新しい曲のジャンルを予測する機能も含まれています：
-
-```python
-# 基本モデルの場合
-classifier.predict_new_song(
-    artist="嵐",
-    song_name="Happiness",
-    url="https://open.spotify.com/track/example",
-    emotions=["Happy/Excited", "Relax/Chill", "Relax/Chill", "Happy/Excited"]
-)
-```
-
-## プロジェクト構造
-
-```
-melosync_ml/
-├── spotify_feature_extractor.py    # Spotify特徴量抽出器
-├── emotion_classifier.py           # 感情分類モデル
-├── main.py                         # 基本分類モデル
-├── advanced_classifier.py          # 高度な分類モデル
-├── requirements.txt                # 必要なライブラリ
-├── README.md                       # このファイル
-├── melosync_music_data.csv         # 音楽データ
-└── 出力ファイル（実行後生成）
-    ├── melosync_music_data_with_spotify_features.csv  # Spotify特徴量付きデータ
-    ├── failed_tracks.csv           # 失敗したトラックリスト
-    ├── *.png                       # 可視化ファイル
-    └── ...
-```
-
-## 技術スタック
-
-- **Python**: 3.8+
-- **機械学習**: scikit-learn, XGBoost, LightGBM
-- **データ処理**: pandas, numpy
-- **可視化**: matplotlib, seaborn
-- **前処理**: LabelEncoder, StandardScaler
-
-## 今後の拡張予定
-
-- [ ] 音声特徴量の追加
-- [ ] 深層学習モデルの実装
-- [ ] Web APIの作成
-- [ ] リアルタイム予測機能
-- [ ] より多くの音楽データの追加
-
-## ライセンス
-
-このプロジェクトは教育目的で作成されています。
-
-## 貢献
-
-バグ報告や機能提案は歓迎します。プルリクエストも受け付けています。
-
-## 連絡先
-
-質問や提案がある場合は、お気軽にお問い合わせください。 
+---
