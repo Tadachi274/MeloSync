@@ -1,13 +1,14 @@
 import pandas as pd
-import joblib
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, log_loss
 from sklearn.impute import SimpleImputer
 import numpy as np
 import os
 from sklearn.ensemble import RandomForestClassifier
-import lightgbm as lgb
+import matplotlib.pyplot as plt
+import xgboost as xgb
+from sklearn.svm import SVC
+from sklearn.preprocessing import LabelEncoder
 
 # 各CSVファイルのパス
 dataset_files = [
@@ -17,10 +18,11 @@ dataset_files = [
     'data/music_data_relax_normalized_encoded.csv'
 ]
 
-# --- ★ 1. モデルの評価結果を保存するリストを初期化 ---
+# --- ★ 1. 初期化 ---
 results_summary = []
+all_feature_importances = [] # 全モデルの重要度を保存するリスト
 
-# --- ループ処理で各CSVファイルに対してモデルを構築 ---
+# --- ★ 2. ループ処理で各CSVファイルに対してモデルを構築 ---
 for file_path in dataset_files:
     print(f"=================================================")
     print(f"処理中のファイル: {file_path}")
@@ -40,25 +42,20 @@ for file_path in dataset_files:
     # df = df[df["担当者"] == "Yifan"]
     # print(len(df))
     
-    missing_counts = df.isnull().sum()
-    print("各列の欠損値の数:")
-    print(missing_counts[missing_counts > 0])  # 欠損がある列だけ表示
-    print("\n")
-    print(df.head())
     
-    # 最初の7列を除外
+    
+    # 最初の7列と不要な列を除外
     df = df.iloc[:, 7:]
-    # modeを除外
-    df = df.drop(columns=['mode_0.0', 'mode_1.0'])
-    
-    # ジャンルを除外
-    df = df.drop(columns=['ジャンル'])
+    if 'mode_0.0' in df.columns and 'mode_1.0' in df.columns:
+        df = df.drop(columns=['mode_0.0', 'mode_1.0'])
+    if 'ジャンル' in df.columns:
+        df = df.drop(columns=['ジャンル'])
 
     # 特徴量と正解ラベルの分割
     X = df.iloc[:, :-1]
     y = df.iloc[:, -1]
 
-    # データクリーニング（型変換）
+    # データクリーニング
     for col in X.columns:
         X[col] = pd.to_numeric(X[col], errors='coerce')
     if y.isnull().any():
@@ -72,8 +69,6 @@ for file_path in dataset_files:
     X_train = imputer.fit_transform(X_train)
     X_test = imputer.transform(X_test)
     
-    print("データ準備完了（欠損値処理済み）")
-    
     # モデルの学習
     # ロジスティック回帰
     # model = LogisticRegression(multi_class='multinomial', solver='lbfgs', random_state=42, max_iter=1000)
@@ -84,53 +79,79 @@ for file_path in dataset_files:
     # LightGBM
     # model = lgb.LGBMClassifier(random_state=42)
     
+    # XGBoost
+    # le = LabelEncoder()
+    # # yの文字列ラベルを数値（0, 1, 2, 3）に変換
+    # y_encoded = le.fit_transform(y)
+    # # 変換後のy_encodedを使ってデータを分割
+    # X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=0.2, random_state=42)
+    # model = xgb.XGBClassifier(random_state=42, use_label_encoder=False, eval_metric='mlogloss')
+    
+    # SVM
+    # model = SVC(probability=True, random_state=42)
+
     model.fit(X_train, y_train)
     
-    print("モデルの学習が完了しました。")
-    # 学習済みモデルを 'my_model.joblib' という名前で保存
-    joblib.dump(model, f'model/my_model_{model_name}.joblib') 
+    # # --- 特徴量の重要度をリストに保存 --- ランダムフォレストの場合のみこれが動かせる。
+    # importances = model.feature_importances_
+    # feature_importance_df = pd.DataFrame({
+    #     'Feature': X.columns,
+    #     'Importance': importances
+    # })
+    # all_feature_importances.append(feature_importance_df)
 
-    print(f"学習済みモデルを model/my_model_{model_name}.joblib として保存しました。")
-    
-    # モデルの評価
+    # ... (モデルの評価や保存処理は変更なし) ...
     y_pred = model.predict(X_test)
     y_pred_proba = model.predict_proba(X_test)
     accuracy = accuracy_score(y_test, y_pred)
     loss = log_loss(y_test, y_pred_proba, labels=model.classes_)
-    
-
-    # --- ★ 2. 評価結果をリストに追加 ---
-    results_summary.append({
-        'model': model_name,
-        'accuracy': accuracy,
-        'loss': loss
-    })
-    
-    # 予測結果の保存
-    output_filename = f"data/prediction/prediction_results_{model_name}.csv"
-    results_df = pd.DataFrame(y_pred_proba, columns=model.classes_)
-    results_df['True Label'] = y_test.values
-    results_df['Predicted Label'] = y_pred
-    results_df.to_csv(output_filename, index=False)
-    print(f"予測結果を '{output_filename}' に保存しました。\n")
-
+    results_summary.append({'model': model_name, 'accuracy': accuracy, 'loss': loss})
+    print(f"{model_name}モデルの評価完了 - 正解率: {accuracy:.4f}")
 
 
 # --- ★ 3. 全ての処理完了後、結果をまとめて表示 ---
-print("=================================================")
+print("\n=================================================")
 print("全モデルの評価結果まとめ")
 print("=================================================")
-
-if not results_summary:
-    print("処理されたモデルがありませんでした。")
-else:
+if results_summary:
     for result in results_summary:
         print(f"モデル: {result['model']:<10} | 正解率: {result['accuracy']:.4f} | 損失: {result['loss']:.4f}")
-
-    # --- ★ 4. 平均正解率を計算して表示 ---
-    all_accuracies = [result['accuracy'] for result in results_summary]
-    average_accuracy = np.mean(all_accuracies)
-    
+    average_accuracy = np.mean([result['accuracy'] for result in results_summary])
     print("-------------------------------------------------")
     print(f"平均正解率: {average_accuracy:.4f}")
-    print("=================================================")
+
+# --- ★ 4. 全モデルの重要度を合算してランキングを作成 ★---　ランダムフォレストの場合これが動かせる。
+# print("\n=================================================")
+# print("総合的な特徴量の重要度ランキング（4モデル平均）")
+# print("=================================================")
+# if not all_feature_importances:
+#     print("特徴量の重要度データがありません。")
+# else:
+#     # 全モデルの重要度データを1つのDataFrameに結合
+#     combined_importances_df = pd.concat(all_feature_importances)
+
+#     # 特徴量ごとに重要度の平均を計算
+#     # ascending=Trueで重要度が低い順（必要ない順）にソート
+#     average_importance = combined_importances_df.groupby('Feature')['Importance'].mean().sort_values(ascending=True)
+
+#     print("【総合的に見て必要ない可能性が高い特徴量ランキング】")
+#     print(average_importance.head(15)) # ワースト15位を表示
+
+#     # グラフ描画用に降順でソート
+#     average_importance_desc = average_importance.sort_values(ascending=False)
+
+#     # 総合的な重要度をグラフで可視化
+#     plt.figure(figsize=(12, 10))
+#     plt.barh(average_importance_desc.index, average_importance_desc.values)
+#     plt.xlabel('平均重要度 (Average Importance)')
+#     plt.ylabel('特徴量 (Feature)')
+#     plt.title('総合的な特徴量の重要度（4モデル平均）')
+#     plt.gca().invert_yaxis()
+#     plt.tight_layout()
+
+#     # グラフをファイルとして保存
+#     os.makedirs('feature_importance_graphs', exist_ok=True)
+#     graph_filename = "data/analysis/importance_ALL_MODELS_combined.png"
+#     plt.savefig(graph_filename)
+#     print(f"\n総合的な特徴量の重要度グラフを '{graph_filename}' に保存しました。")
+#     plt.show()
