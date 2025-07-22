@@ -14,7 +14,6 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 private object PrefKeys {
     val SPOTIFY_LOGGED_IN = booleanPreferencesKey("spotify_logged_in")
 }
-
 class AuthRepository(private val ctx: Context) {
     private val dataStore = ctx.dataStore
     private val JWT_KEY = stringPreferencesKey("jwt_token")
