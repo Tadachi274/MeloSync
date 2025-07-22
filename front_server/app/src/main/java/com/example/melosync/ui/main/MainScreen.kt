@@ -1,12 +1,16 @@
 package com.example.melosync.ui.main
 
+import android.graphics.Bitmap
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.Image
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.PlayArrow
+
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,6 +34,7 @@ import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.res.painterResource
@@ -37,54 +42,103 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontWeight
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.example.melosync.ui.spotify.SpotifyViewModel
+import com.spotify.protocol.types.PlayerState
+import com.spotify.sdk.android.auth.AuthorizationClient
+import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.CircleShape
 
+
+
+@OptIn(ExperimentalMaterial3Api::class) // TopAppBar用に追記
 @Composable
 fun MainScreen(
     emotion: Emotion,
     onNavigateToSettings: () -> Unit,
-    viewModel: MainViewModel = viewModel()
+    mainviewModel: MainViewModel = viewModel() ,
+    spotifyViewModel: SpotifyViewModel
 ) {
     // ViewModelに選択された感情をセット
     LaunchedEffect(key1 = emotion) {
-        viewModel.setEmotion(emotion)
+        mainviewModel.setEmotion(emotion)
     }
 
     var showMenu by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val emotionCoordinate by viewModel.emotionCoordinate.collectAsStateWithLifecycle()
-    val firstEmotionCoordinate by viewModel.firstEmotionCoordinate.collectAsStateWithLifecycle()
-    val currentEmotion by viewModel.currentEmotion.collectAsStateWithLifecycle()
-    val pointColor by viewModel.pointColor.collectAsStateWithLifecycle()
-
+    // MainViewModelからの状態
+    val emotionCoordinate by mainviewModel.emotionCoordinate.collectAsStateWithLifecycle()
+    val firstEmotionCoordinate by mainviewModel.firstEmotionCoordinate.collectAsStateWithLifecycle()
+//    val currentEmotion by mainviewModel.currentEmotion.collectAsStateWithLifecycle()
+    val pointColor by mainviewModel.pointColor.collectAsStateWithLifecycle()
+    // SpotifyViewModelからの状態
+    val appRemote by spotifyViewModel.appRemote.collectAsState()
+    val playerState by spotifyViewModel.playerState.collectAsState()
+    val currentTrackImage by spotifyViewModel.currentTrackImage.collectAsState()
+    // Spotify認証の結果を受け取るためのランチャー
+    val authLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val response = AuthorizationClient.getResponse(result.resultCode, result.data)
+        spotifyViewModel.handleAppRemoteAuthResponse(response, context)
+    }
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            TopBarWithEmotion(
-                emotion = emotion,
-                onMenuClick = { showMenu = true }
+            // --- ここからが修正箇所 ---
+            TopAppBar(
+                title = {
+                    Text(
+                        text = emotion.emoji,
+                        fontSize = 40.sp,
+                    )
+                },
+                actions = {
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Default.Menu, contentDescription = "メニュー")
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            if (appRemote == null) {
+                                DropdownMenuItem(
+                                    text = { Text("Spotifyにログイン") },
+                                    onClick = {
+                                        spotifyViewModel.connectToAppRemote(context, authLauncher)
+                                        showMenu = false
+                                    }
+                                )
+                            } else {
+                                DropdownMenuItem(
+                                    text = { Text("Spotifyから切断") },
+                                    onClick = {
+                                        spotifyViewModel.disconnect()
+                                        showMenu = false
+                                    }
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text("リストの設定") },
+                                onClick = {
+                                    onNavigateToSettings()
+                                    showMenu = false
+                                }
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             )
+            // --- 修正箇所ここまで ---
         }
     ) { paddingValues ->
-//        DropdownMenu(
-//            expanded = showMenu,
-//            onDismissRequest = { showMenu = false }
-//        ) {
-//            DropdownMenuItem(
-//                text = { Text("Spotifyにログイン") },
-//                onClick = {
-//                    Toast.makeText(context, "ログイン機能は後で実装します", Toast.LENGTH_SHORT).show()
-//                    showMenu = false
-//                }
-//            )
-//            DropdownMenuItem(
-//                text = { Text("リストの設定") },
-//                onClick = {
-//                    onNavigateToSettings()
-//                    showMenu = false
-//                }
-//            )
-//        }
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -104,7 +158,7 @@ fun MainScreen(
                 firstCoordinate = firstEmotionCoordinate,
                 pointColor = pointColor,
                 onCoordinateChange = { newOffset, canvasSize, radius ->
-                    viewModel.updateCoordinate(newOffset, canvasSize, radius)
+                    mainviewModel.updateCoordinate(newOffset, canvasSize, radius)
                 }
             )
 
@@ -136,7 +190,8 @@ fun MainScreen(
                 // 「更新」ボタン
                 Button(
                     onClick = {
-                        Toast.makeText(context, "プレイリスト更新は後で実装します", Toast.LENGTH_SHORT).show()
+//                        Toast.makeText(context, "プレイリスト更新は後で実装します", Toast.LENGTH_SHORT).show()
+                        spotifyViewModel.play("spotify:track:7v6DqVMaljJDUXYavMY4kf")
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = AppPurple2,
@@ -154,18 +209,27 @@ fun MainScreen(
             }
 
             // 現在の象限を表示
-            Text(
-                text =  currentEmotion.name,
-                style = MaterialTheme.typography.headlineSmall,
-//                modifier = Modifier.padding(top = 16.dp)
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
+//            Text(
+//                text =  currentEmotion.name,
+//                style = MaterialTheme.typography.headlineSmall,
+////                modifier = Modifier.padding(top = 16.dp)
+//            )
+//
+//            Spacer(modifier = Modifier.weight(1f))
 
             // Spotifyプレーヤーのプレースホルダー
-            SpotifyPlayerPlaceholder(onConnectClick = {
-                Toast.makeText(context, "ログイン機能は後で実装します", Toast.LENGTH_SHORT).show()
-            })
+            SpotifyPlayerUI(
+                isConnected = appRemote != null,
+                playerState = playerState,
+//                currentTrack = currentTrack,
+                trackImage = currentTrackImage, // ★追加
+                onConnectClick = { spotifyViewModel.connectToAppRemote(context, authLauncher) },
+                onPauseClick = { spotifyViewModel.pause() },
+                onResumeClick = { spotifyViewModel.resume() },
+                onSeekTo = { position -> spotifyViewModel.seekTo(position) },
+                onSkipPreviousClick = { spotifyViewModel.skipPrevious() },
+                onSkipNextClick = { spotifyViewModel.skipNext() }
+            )
         }
     }
 }
@@ -336,34 +400,204 @@ fun EmotionGraph(
 }
 
 @Composable
-fun SpotifyPlayerPlaceholder(onConnectClick: () -> Unit) {
+fun SpotifyPlayerUI(
+    isConnected: Boolean,
+    playerState: PlayerState?,
+    trackImage: Bitmap?,
+    onConnectClick: () -> Unit,
+    onPauseClick: () -> Unit,
+    onResumeClick: () -> Unit,
+    onSeekTo: (Long) -> Unit,
+    onSkipPreviousClick: () -> Unit,
+    onSkipNextClick: () -> Unit
+) {
+    val currentTrack = playerState?.track
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(4.dp)
+        elevation = CardDefaults.cardElevation(4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+//            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.fillMaxWidth(),
+//            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Spotify プレイリスト", style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(16.dp))
-            Box(
-                modifier = Modifier
-                    .size(150.dp)
-                    .background(Color.Gray),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("アルバムアート", color = Color.White)
+            Text("作成されたプレイリスト", style = MaterialTheme.typography.titleSmall)
+            if (isConnected) {
+                // --- 接続済みのUI ---
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // ★修正：アルバムアートを表示
+                    trackImage?.let {
+                        Image(
+                            bitmap = it.asImageBitmap(),
+                            contentDescription = "Album Art",
+                            modifier = Modifier.size(64.dp)
+                        )
+                    } ?: Box( // 画像がない場合のフォールバック
+                        modifier = Modifier
+                            .size(64.dp)
+                            .background(Color.Gray),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Art", color = Color.White)
+                    }
+
+                    Spacer(Modifier.width(16.dp))
+
+                    // 曲情報
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = currentTrack?.name ?: "曲が選択されていません",
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = currentTrack?.artist?.name ?: "",
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+
+                // --- ここからがスライダーの実装 ---
+                val trackDuration = currentTrack?.duration ?: 0L
+                val playbackPosition = playerState?.playbackPosition ?: 0L
+                val isPaused = playerState?.isPaused ?: true
+
+                var sliderPosition by remember { mutableFloatStateOf(0f) }
+                var isSeeking by remember { mutableStateOf(false) }
+
+                // SDKからの再生位置(playbackPosition)が変更されたときに、スライダーの位置を更新します。
+                // ただし、ユーザーがスライダーを操作中(isSeeking)は更新しません。
+                // これにより、SDKからの不定期な更新と、ユーザー操作が両立します。
+                LaunchedEffect(playbackPosition) {
+                    if (!isSeeking) {
+                        sliderPosition = playbackPosition.toFloat()
+                    }
+                }
+
+                // 再生中かつユーザーが操作していないときに、スライダーを滑らかに進めるためのタイマーです。
+                LaunchedEffect(isPaused, isSeeking) {
+                    // 再生中で、ユーザーがシークバーを操作していない場合にのみループを実行
+                    if (!isPaused && !isSeeking) {
+                        while (true) {
+                            delay(200L) // 0.2秒ごとにスライダーを更新
+                            if (sliderPosition < trackDuration) {
+                                sliderPosition += 200f
+                            }
+                        }
+                    }
+                }
+
+                Slider(
+                    value = sliderPosition.coerceIn(0f, trackDuration.toFloat()), // 値が意図せず範囲外になることを防ぐ
+                    onValueChange = {
+                        isSeeking = true
+                        sliderPosition = it
+                    },
+                    onValueChangeFinished = {
+                        onSeekTo(sliderPosition.toLong())
+                        isSeeking = false
+                    },
+                    valueRange = 0f..(trackDuration.toFloat().takeIf { it > 0f } ?: 1f), // durationが0の場合にエラーにならないように
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(
+                        thumbColor = AppPurple2,
+                        activeTrackColor = AppPurple2,
+                        inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f)
+                    ),
+
+                )
+
+                // --- スライダーの実装ここまで ---
+                // 再生コントロールボタン
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onSkipPreviousClick) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.skip_previous),
+                            contentDescription = "前の曲へ",
+                            modifier = Modifier.size(32.dp), // ★アイコンサイズを大きく
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    FilledIconButton(
+                        onClick = if (playerState?.isPaused == true) onResumeClick else onPauseClick,
+                        modifier = Modifier.size(56.dp),
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = AppPurple2,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    ) {
+                        if (playerState?.isPaused == true) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = "再開",
+                                modifier = Modifier.size(36.dp)
+                            )
+                        } else {
+                            Icon(
+                                painter = painterResource(id = R.drawable.pause),
+                                contentDescription = "一時停止",
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
+                    }
+                    IconButton(onClick = onSkipNextClick) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.skip),
+                            contentDescription = "次の曲へ",
+                            modifier = Modifier.size(32.dp), // ★アイコンサイズを大きく
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            } else {
+                // --- 未接続のUI ---
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .background(Color.Gray),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Art", color = Color.White)
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("曲名", style = MaterialTheme.typography.titleMedium)
+                        Text("アーティスト名", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = onConnectClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppPurple2)
+                ) {
+                    Text("Spotifyに接続して再生")
+                }
             }
-            Spacer(Modifier.height(16.dp))
-            Text("曲名", style = MaterialTheme.typography.titleMedium)
-            Text("アーティスト名", style = MaterialTheme.typography.bodyMedium)
-            Spacer(Modifier.height(8.dp))
-            Button(onClick = onConnectClick) {
-                Text("Spotifyに接続して再生")
-            }
+
         }
     }
+
+}
+private fun formatMillis(millis: Long): String {
+    val totalSeconds = millis / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return String.format("%02d:%02d", minutes, seconds)
 }
 //fun SpotifyPlayerPlaceholder() {
 //    // Spotifyの再生画面はSDKの制約上、完全にUIを埋め込むのが難しいため

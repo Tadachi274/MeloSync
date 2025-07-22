@@ -1,0 +1,210 @@
+package com.example.melosync.ui.spotify
+
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.util.Log
+import androidx.activity.result.ActivityResultLauncher
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.melosync.data.api.ApiService
+import android.graphics.Bitmap
+import com.example.melosync.data.api.CurrentlyPlayingContext
+import com.example.melosync.data.api.PlayRequest
+import com.spotify.android.appremote.api.ConnectionParams
+import com.spotify.android.appremote.api.Connector
+import com.spotify.android.appremote.api.SpotifyAppRemote
+import com.spotify.protocol.types.PlayerState
+import com.spotify.protocol.types.Track
+import com.example.melosync.data.api.RetrofitClient
+import com.spotify.sdk.android.auth.AuthorizationClient
+import com.spotify.sdk.android.auth.AuthorizationRequest
+import com.spotify.sdk.android.auth.AuthorizationResponse
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+
+private const val CLIENT_ID = "ced2ee375b444183a40d0a95de22d132" // あなたのClientIDに書き換えてください
+private const val REDIRECT_URI = "com.example.melosync://callback"
+
+class SpotifyViewModel : ViewModel() {
+
+    // バックエンドとの通信用
+    private val backendApiService: ApiService = RetrofitClient.backendApi
+    // Spotify Web APIとの通信用
+    private val spotifyApiService: ApiService = RetrofitClient.spotifyApi
+    // App Remoteの接続状態
+    private val _appRemote = MutableStateFlow<SpotifyAppRemote?>(null)
+    val appRemote = _appRemote.asStateFlow()
+    // 現在のトラック情報
+    private val _currentTrack = MutableStateFlow<Track?>(null)
+    val currentTrack = _currentTrack.asStateFlow()
+    // 現在のPlayerStateを保持する (再生位置や曲の長さも含む)
+    private val _playerState = MutableStateFlow<PlayerState?>(null)
+    val playerState = _playerState.asStateFlow()
+    // アクセストークン
+    private val _accessToken = MutableStateFlow<String?>(null)
+    val accessToken = _accessToken.asStateFlow()
+    //再生の待ち列
+    private val _playbackQueue = MutableStateFlow<List<String>>(emptyList())
+    val playbackQueue = _playbackQueue.asStateFlow()
+    // ★追加：現在のアルバムアートを保持する
+    private val _currentTrackImage = MutableStateFlow<Bitmap?>(null)
+    val currentTrackImage = _currentTrackImage.asStateFlow()
+
+
+    // --- App Remote SDKの接続フロー ---
+
+    /**
+     * App Remoteに接続するための認証を開始します (TOKENフロー)
+     * UIからこの関数を呼び出して、結果をhandleAppRemoteAuthResponseに渡します。
+     */
+    fun connectToAppRemote(context: Context, launcher: ActivityResultLauncher<Intent>) {
+        val request = AuthorizationRequest.Builder(
+            CLIENT_ID,
+            AuthorizationResponse.Type.TOKEN, // App Remote接続にはTOKENタイプが必須
+            REDIRECT_URI
+        ).setScopes(arrayOf("app-remote-control", "user-read-playback-state"))
+            .build()
+        val intent = AuthorizationClient.createLoginActivityIntent(context as Activity, request)
+        launcher.launch(intent)
+    }
+
+    /**
+     * App Remote認証のレスポンスを処理します
+     */
+    fun handleAppRemoteAuthResponse(response: AuthorizationResponse, context: Context) {
+        if (response.type == AuthorizationResponse.Type.TOKEN) {
+            val connectionParams = ConnectionParams.Builder(CLIENT_ID)
+                .setRedirectUri(REDIRECT_URI)
+                .showAuthView(false)
+                .build()
+
+            SpotifyAppRemote.connect(context, connectionParams, object : Connector.ConnectionListener {
+                override fun onConnected(remote: SpotifyAppRemote) {
+                    _appRemote.value = remote
+                    subscribeToPlayerState(remote)
+                    Log.d("SpotifyViewModel", "Connected to App Remote!")
+                }
+                override fun onFailure(throwable: Throwable) {
+                    Log.e("SpotifyViewModel", "Could not connect to App Remote: ${throwable.message}")
+                }
+            })
+        } else if (response.type == AuthorizationResponse.Type.ERROR) {
+            Log.e("SpotifyViewModel", "App Remote Auth Error: ${response.error}")
+        }
+    }
+
+    // --- バックエンド連携の認証フロー ---
+
+    /**
+     * バックエンド経由でトークンを取得するための認証を開始します (CODEフロー)
+     * UIからこの関数を呼び出して、結果をhandleBackendAuthResponseに渡します。
+     */
+    fun authenticateWithBackend(context: Context, launcher: ActivityResultLauncher<Intent>) {
+        val request = AuthorizationRequest.Builder(
+            CLIENT_ID,
+            AuthorizationResponse.Type.CODE, // バックエンド連携にはCODEタイプが必須
+            REDIRECT_URI
+        ).setScopes(arrayOf("user-read-private", "playlist-read-private")) // Web APIで使いたい権限
+            .build()
+        val intent = AuthorizationClient.createLoginActivityIntent(context as Activity, request)
+        launcher.launch(intent)
+    }
+
+    /**
+     * バックエンド認証のレスポンス（認証コード）を処理します
+     */
+    fun handleBackendAuthResponse(response: AuthorizationResponse) {
+        if (response.type == AuthorizationResponse.Type.CODE) {
+            viewModelScope.launch {
+                try {
+                    val apiResponse = backendApiService.getAccessToken(response.code)
+                    if (apiResponse.isSuccessful && apiResponse.body() != null) {
+                        _accessToken.value = apiResponse.body()!!.accessToken
+                        Log.d("SpotifyViewModel", "Access Token from backend is ready!")
+                    } else {
+                        Log.e("SpotifyViewModel", "Backend API Error: ${apiResponse.errorBody()?.string()}")
+                    }
+                } catch (e: Exception) {
+                    Log.e("SpotifyViewModel", "Failed to get token from backend", e)
+                }
+            }
+        } else if (response.type == AuthorizationResponse.Type.ERROR) {
+            Log.e("SpotifyViewModel", "Backend Auth Error: ${response.error}")
+        }
+    }
+
+    // --- Web APIを使った再生コントロール ---
+
+    /**
+     * トラックIDのリストを受け取り、再生を開始する
+     */
+    // --- 共通のヘルパー関数と再生コントロール ---
+
+    private fun subscribeToPlayerState(remote: SpotifyAppRemote) {
+        remote.playerApi.subscribeToPlayerState().setEventCallback { playerState ->
+            // PlayerState全体を更新
+            _playerState.value = playerState
+            // トラック情報を更新
+            _currentTrack.value = playerState.track
+            // トラックのimageUriを使って画像を取得
+            playerState.track?.imageUri?.let {
+                remote.imagesApi.getImage(it).setResultCallback { bitmap ->
+                    _currentTrackImage.value = bitmap
+                }
+            }
+//            playerState.track?.imageUri?.let {
+//                // 画像が現在のものと違う場合のみ取得
+//                if (it.id != _currentTrack.value?.imageUri?.id) {
+//                    remote.imagesApi.getImage(it).setResultCallback { bitmap ->
+//                        _currentTrackImage.value = bitmap
+//                    }
+//                }
+//            }
+        }
+    }
+
+    fun play(uri: String) {
+        _appRemote.value?.playerApi?.play(uri)
+    }
+
+    fun pause() {
+        _appRemote.value?.playerApi?.pause()
+    }
+
+    fun resume() {
+        _appRemote.value?.playerApi?.resume()
+    }
+
+    // ★追加：再生位置を変更する
+    fun seekTo(position: Long) {
+        _appRemote.value?.playerApi?.seekTo(position)
+    }
+
+    // ★追加：次の曲へ
+    fun skipNext() {
+        _appRemote.value?.playerApi?.skipNext()
+    }
+
+    // ★追加：前の曲へ
+    fun skipPrevious() {
+        _appRemote.value?.playerApi?.skipPrevious()
+    }
+
+    fun disconnect() {
+        _appRemote.value?.let { SpotifyAppRemote.disconnect(it) }
+        _appRemote.value = null
+        _accessToken.value = null // バックエンドのトークンもクリア
+        _currentTrackImage.value = null
+
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        disconnect()
+    }
+}

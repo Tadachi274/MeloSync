@@ -9,6 +9,8 @@ import androidx.navigation.navArgument
 import com.example.melosync.data.Emotion
 import com.example.melosync.ui.home.HomeScreen
 import com.example.melosync.ui.main.MainScreen
+import com.example.melosync.ui.spotify.SpotifyViewModel // SpotifyViewModelをインポート
+import androidx.lifecycle.viewmodel.compose.viewModel // ViewModelをインポート
 
 // 画面遷移のルートを定義
 object Routes {
@@ -21,6 +23,7 @@ object Routes {
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+    val spotifyViewModel: SpotifyViewModel = viewModel()
 
     NavHost(
         navController = navController,
@@ -47,6 +50,7 @@ fun AppNavigation() {
 
             MainScreen(
                 emotion = emotion,
+                spotifyViewModel = spotifyViewModel,
                 onNavigateToSettings = {
                     // TODO: 設定画面への遷移を実装
                     // navController.navigate(Routes.SETTINGS)
