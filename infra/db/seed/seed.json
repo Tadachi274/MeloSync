@@ -1,0 +1,10 @@
+[
+    {
+      "access_token": "BQCs25RdEeneG2b6D68uaeoT1NLohmuTWTWNJmUP2t9Rj-YQ-Mx8J3xnkpf1xobiwaDNipApqOwgkFMiLe8rNaKGC75PLY7sWstOml0LTousCBmzyG-941w4nqwoT8Qr3Lw-vh6ZPYGDM3H-yh3SocoBR6QN6JpWqygvleEkKMAyK_pbiJYI4N_orhH0ATW5YajpgE38fzehjb8ozEa2fzchM57yq51_-ABAC_jUlB7n47Q8RLH0oGgKaYg-zMJqDaYSq4XgKfF0kxA6uioQtSbV-SnhQwjvzTrekDEuAPT6Fh7m",
+      "token_type": "Bearer",
+      "expires_in": 3600,
+      "refresh_token": "AQDT4GIqlNG11bCLTQunblcms8V6W_CtpfaGkjxPARLbfmddH0gfwxnicUHbpOSzeTv7LOghoa5sMI-i7cLW5nLKWA4tFltk70txBsuJcnEw0a7uR8yTJPx1ktD-FSI6P1o",
+      "scope": "playlist-modify-public playlist-read-private user-library-read user-read-email user-read-private",
+      "expires_at": 1751954408
+    }
+  ]
