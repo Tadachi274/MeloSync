@@ -1,3 +1,4 @@
+# ArousalとValenceを別々で予測。分けない方が精度低かった。
 import pandas as pd
 import numpy as np
 import joblib
