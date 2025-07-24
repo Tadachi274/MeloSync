@@ -60,4 +60,5 @@ async def google_login(req: GoogleLoginRequest):
     # （例：DBに保存したり、既存レコードを検索したり）
 
     access_token = create_jwt(user_id)
+    print(access_token)
     return {"access_token": access_token}
