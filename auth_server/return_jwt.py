@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from jose import jwt
 from dotenv import load_dotenv
+import uuid
 
 # ─── 環境変数読み込み ─────────────────────────────────────
 load_dotenv()
@@ -30,36 +31,15 @@ def create_jwt(user_id: str) -> str:
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
-
-# ─── Google ID トークン検証のスタブ ─────────────────────────
-def verify_google_id_token(id_token: str) -> str:
-    """
-    本番では google.oauth2.id_token.verify_oauth2_token を使って
-    id_token の正当性を検証し、payload['sub'] を返します。
-    ここでは例示のためスタブ実装としています。
-    """
-    # 例：
-    # from google.oauth2 import id_token as google_id_token
-    # from google.auth.transport import requests
-    # id_info = google_id_token.verify_oauth2_token(
-    #     id_token,
-    #     requests.Request(),
-    #     os.getenv("GOOGLE_CLIENT_ID")
-    # )
-    # return id_info["sub"]
-    return "example_user_id"
-
-
 # ─── エンドポイント：Google ログイン → JWT 返却 ────────────────
 @app.post("/api/auth/google-login")
-async def google_login(req: GoogleLoginRequest):
-    print("Received Google ID token:", req.id_token)
-    user_id = verify_google_id_token(req.id_token)
+async def google_login():
+    print("Received Login Request")
+    user_id = str(uuid.uuid4())
+    print("user_id:", user_id)
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid Google ID token")
 
-    # ── ここで user_id を元に「ユーザーの新規作成 or 既存確認」を行う ──
-    # （例：DBに保存したり、既存レコードを検索したり）
 
     access_token = create_jwt(user_id)
     print("access_token:", access_token)

@@ -64,5 +64,11 @@
             </intent-filter>
         </activity>
     </application>
+    <queries>
+        <intent>
+            <action android:name="android.credentials.GET_CREDENTIAL"/>
+        </intent>
+        <package android:name="com.google.android.gms"/>
+    </queries>
 
 </manifest>

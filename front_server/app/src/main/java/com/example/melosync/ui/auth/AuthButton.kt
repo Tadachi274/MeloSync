@@ -8,6 +8,6 @@ import androidx.compose.runtime.Composable
 @Composable
 fun AuthButton(onClick: () -> Unit) {
     Button(onClick = onClick) {
-        Text("Google でログイン")
+        Text("ログイン")
     }
 }
