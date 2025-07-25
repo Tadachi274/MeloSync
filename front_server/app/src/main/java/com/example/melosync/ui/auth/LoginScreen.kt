@@ -17,15 +17,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.melosync.MainActivity
+import java.util.UUID
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 
 
 @Composable
 fun LoginScreen(
-    viewModel: AuthViewModel,
-    modifier: Modifier = Modifier
+    onNavigateToHome: () -> Unit,
+    authViewModel: AuthViewModel,
+
 ) {
     // ViewModel の UI 状態を監視
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by authViewModel.uiState.collectAsState()
+    val modifier = Modifier
 
     val context = LocalContext.current
     // エラーが出たらトースト表示
@@ -40,10 +45,9 @@ fun LoginScreen(
                 CircularProgressIndicator()
             }
             uiState.isLoggedIn -> {
+                Log.d("LoginScreen","isSpotifyLoggedIn:${uiState.isSpotifyLoggedIn}")
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Googleログイン済みです")
-                    Spacer(modifier = Modifier.height(24.dp))
-                    LogoutButton { viewModel.logout() }
+                    Text("ログイン済みです")
 
                     Spacer(modifier = Modifier.height(24.dp))
                     // 追加：Spotify 認証ボタン
@@ -63,23 +67,26 @@ fun LoginScreen(
                             .appendQueryParameter("show_dialog", "true")
                             .build()
                         context.startActivity(Intent(Intent.ACTION_VIEW, authUri))
+                        //authViewModel.onSpotifyLoginSuccess()
                     }) {
                         Text("Spotifyで認証")
                     }
-                    Button(
-                        onClick = {
-                            // MainActivity（HomeScreen を表示している Activity）を起動
-                            val intent = Intent(context, MainActivity::class.java)
-                            context.startActivity(intent)
-                        }
-                    ) {
-                        Text("ホーム画面へ")
-                    }
+                    // Button(
+                    //    onClick = {
+                    //        val intent = Intent(context, MainActivity::class.java)
+                    //        context.startActivity(intent)
+                    //    }
+                    //) {
+                    //    Text("ホーム画面へ")
+                    //}
+                    Spacer(modifier = Modifier.height(120.dp))
+                    LogoutButton { authViewModel.logout() }
                 }
             }
             else -> {
-                    AuthButton { viewModel.signIn() }
-                }
+                AuthButton {authViewModel.signIn()}
+
             }
         }
+    }
 }

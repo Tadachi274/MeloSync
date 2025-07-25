@@ -1,5 +1,8 @@
 package com.example.melosync.ui.home
 
+import android.content.Intent
+import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -9,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -24,8 +28,10 @@ import com.example.melosync.ui.auth.LoginScreen
 import com.example.melosync.ui.auth.AuthViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.LifecycleOwner
+import com.example.melosync.ui.auth.SignInWithGoogleFunctions
 import com.example.melosync.ui.auth.AuthRepository
 import com.example.melosync.ui.auth.LogoutButton
 import kotlinx.coroutines.launch
@@ -38,18 +44,15 @@ fun HomeScreen(
     onNavigateToMain: (Emotion) -> Unit={},
     viewModel: HomeViewModel = viewModel() ,
     authViewModel: AuthViewModel,
-    repository: AuthRepository
 ) {
     // ログイン状態を監視
     val uiState by authViewModel.uiState.collectAsState()
+    val context = LocalContext.current
     println("[HomeScreen]isLoggedIn:${uiState.isLoggedIn}")
     println("[HomeScreen]isSpotifyLoggedIn:${uiState.isSpotifyLoggedIn}")
     println(!uiState.isLoggedIn && !uiState.isSpotifyLoggedIn)
 
-    if (!uiState.isLoggedIn || !uiState.isSpotifyLoggedIn) {
-        LoginScreen(viewModel = authViewModel)
-        return
-    }
+
 
     Scaffold { paddingValues ->
         Column(
@@ -59,6 +62,30 @@ fun HomeScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            Text("ログイン済みです")
+
+            Spacer(modifier = Modifier.height(24.dp))
+            // 追加：Spotify 認証ボタン
+            Button(onClick = {
+                // クライアントID／リダイレクトURI は適宜置き換えてください
+                Log.d("LoginScreen","SpotifyLoginButton Click.")
+                val clientId = "ced2ee375b444183a40d0a95de22d132"
+                val redirectUri = "com.example.melosync://callback"
+                val authUri = Uri.Builder()
+                    .scheme("https")
+                    .authority("accounts.spotify.com")
+                    .appendPath("authorize")
+                    .appendQueryParameter("client_id", clientId)
+                    .appendQueryParameter("response_type", "code")
+                    .appendQueryParameter("redirect_uri", redirectUri)
+                    .appendQueryParameter("scope", "user-read-private playlist-modify-public playlist-read-private")  // 必要なスコープを追加
+                    .appendQueryParameter("show_dialog", "true")
+                    .build()
+                context.startActivity(Intent(Intent.ACTION_VIEW, authUri))
+            }) {
+                Text("Spotifyで認証")
+            }
+
             Text(
                 text = "今の気分は？",
                 style = MaterialTheme.typography.headlineMedium
