@@ -67,7 +67,7 @@ fun LoginScreen(
                             .appendQueryParameter("show_dialog", "true")
                             .build()
                         context.startActivity(Intent(Intent.ACTION_VIEW, authUri))
-                        //authViewModel.onSpotifyLoginSuccess()
+                        authViewModel.onSpotifyLoginSuccess()
                     }) {
                         Text("Spotifyで認証")
                     }

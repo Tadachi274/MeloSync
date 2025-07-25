@@ -45,15 +45,6 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel() ,
     authViewModel: AuthViewModel,
 ) {
-    // ログイン状態を監視
-    val uiState by authViewModel.uiState.collectAsState()
-    val context = LocalContext.current
-    println("[HomeScreen]isLoggedIn:${uiState.isLoggedIn}")
-    println("[HomeScreen]isSpotifyLoggedIn:${uiState.isSpotifyLoggedIn}")
-    println(!uiState.isLoggedIn && !uiState.isSpotifyLoggedIn)
-
-
-
     Scaffold { paddingValues ->
         Column(
             modifier = Modifier
@@ -62,30 +53,6 @@ fun HomeScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("ログイン済みです")
-
-            Spacer(modifier = Modifier.height(24.dp))
-            // 追加：Spotify 認証ボタン
-            Button(onClick = {
-                // クライアントID／リダイレクトURI は適宜置き換えてください
-                Log.d("LoginScreen","SpotifyLoginButton Click.")
-                val clientId = "ced2ee375b444183a40d0a95de22d132"
-                val redirectUri = "com.example.melosync://callback"
-                val authUri = Uri.Builder()
-                    .scheme("https")
-                    .authority("accounts.spotify.com")
-                    .appendPath("authorize")
-                    .appendQueryParameter("client_id", clientId)
-                    .appendQueryParameter("response_type", "code")
-                    .appendQueryParameter("redirect_uri", redirectUri)
-                    .appendQueryParameter("scope", "user-read-private playlist-modify-public playlist-read-private")  // 必要なスコープを追加
-                    .appendQueryParameter("show_dialog", "true")
-                    .build()
-                context.startActivity(Intent(Intent.ACTION_VIEW, authUri))
-            }) {
-                Text("Spotifyで認証")
-            }
-
             Text(
                 text = "今の気分は？",
                 style = MaterialTheme.typography.headlineMedium
