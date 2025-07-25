@@ -12,3 +12,7 @@ enum class SendEmotion(val id: Int){
     SAD(3),
     RELAX(4)
 }
+
+class MusicData {
+    
+}
