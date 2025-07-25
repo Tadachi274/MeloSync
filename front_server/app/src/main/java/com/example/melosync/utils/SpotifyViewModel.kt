@@ -313,12 +313,28 @@ class SpotifyViewModel : ViewModel() {
 
     // ★追加：次の曲へ
     fun skipNext() {
-        _appRemote.value?.playerApi?.skipNext()
+//        _appRemote.value?.playerApi?.skipNext()
+        val currentTrackUri = _playerState.value?.track?.uri
+        if (currentTrackUri != null) {
+            val currentIndex = _playbackQueue.value.indexOfFirst { "spotify:track:${it.trackId}" == currentTrackUri }
+            if (currentIndex != -1 && currentIndex < _playbackQueue.value.size - 1) {
+                val nextTrack = _playbackQueue.value[currentIndex + 1]
+                play("spotify:track:${nextTrack.trackId}")
+            }
+        }
     }
 
     // ★追加：前の曲へ
     fun skipPrevious() {
-        _appRemote.value?.playerApi?.skipPrevious()
+//        _appRemote.value?.playerApi?.skipPrevious()
+        val currentTrackUri = _playerState.value?.track?.uri
+        if (currentTrackUri != null) {
+            val currentIndex = _playbackQueue.value.indexOfFirst { "spotify:track:${it.trackId}" == currentTrackUri }
+            if (currentIndex > 0) {
+                val previousTrack = _playbackQueue.value[currentIndex - 1]
+                play("spotify:track:${previousTrack.trackId}")
+            }
+        }
     }
 
     fun disconnect() {
@@ -336,6 +352,7 @@ class SpotifyViewModel : ViewModel() {
 //            fetchPlaylistList()
             // 今回はダミーデータを表示
             _playlists.value = dummyPlaylists
+
         }
     }
 
@@ -352,6 +369,7 @@ class SpotifyViewModel : ViewModel() {
 //            fetchEmotionPlaylist(SendEmotion.HAPPY, SendEmotion.RELAX, chosenPlaylists = chosenPlaylists)
             // 今回はダミーデータを表示
             _playbackQueue.value = dummyTrackLists
+            play("spotify:track:${_playbackQueue.value[0].trackId}")
         }
     }
 
@@ -392,6 +410,78 @@ class SpotifyViewModel : ViewModel() {
     }
 
     private val dummyTrackLists = listOf(
+        TrackAPI(
+            trackId = "0Ns63lt28epRgED3Tnhmth",
+            imageName = "https://i.scdn.co/image/ab67616d0000b27357a4e5830ef3e0aeee2874ce",
+            artistName = "ARASHI",
+            trackName = "Happiness"
+        ),
+        TrackAPI(
+            trackId = "1kdGYCHCff09E2FASM5IVY",
+            imageName = "https://i.scdn.co/image/ab67616d0000b2738ac80cfc486397adceeaf15a",
+            artistName = "ARASHI",
+            trackName = "A・RA・SHI"
+        ),
+        TrackAPI(
+            trackId = "0aaZG5azeJei81A2WptwC8",
+            imageName = "https://i.scdn.co/image/ab67616d0000b273302dfd429f8d589a7ae2c3af",
+            artistName = "Hump Back",
+            trackName = "拝啓、少年よ"
+        ),
+        TrackAPI(
+            trackId = "10Eyo4juZQFthKqlJgGMdp",
+            imageName = "https://i.scdn.co/image/ab67616d0000b273ae51734d04ef431b65a09a9a",
+            artistName = "back number",
+            trackName = "怪盗"
+        ),
+        TrackAPI(
+            trackId = "0Ns63lt28epRgED3Tnhmth",
+            imageName = "https://i.scdn.co/image/ab67616d0000b27357a4e5830ef3e0aeee2874ce",
+            artistName = "ARASHI",
+            trackName = "Happiness"
+        ),
+        TrackAPI(
+            trackId = "1kdGYCHCff09E2FASM5IVY",
+            imageName = "https://i.scdn.co/image/ab67616d0000b2738ac80cfc486397adceeaf15a",
+            artistName = "ARASHI",
+            trackName = "A・RA・SHI"
+        ),
+        TrackAPI(
+            trackId = "0aaZG5azeJei81A2WptwC8",
+            imageName = "https://i.scdn.co/image/ab67616d0000b273302dfd429f8d589a7ae2c3af",
+            artistName = "Hump Back",
+            trackName = "拝啓、少年よ"
+        ),
+        TrackAPI(
+            trackId = "10Eyo4juZQFthKqlJgGMdp",
+            imageName = "https://i.scdn.co/image/ab67616d0000b273ae51734d04ef431b65a09a9a",
+            artistName = "back number",
+            trackName = "怪盗"
+        ),
+        TrackAPI(
+            trackId = "0Ns63lt28epRgED3Tnhmth",
+            imageName = "https://i.scdn.co/image/ab67616d0000b27357a4e5830ef3e0aeee2874ce",
+            artistName = "ARASHI",
+            trackName = "Happiness"
+        ),
+        TrackAPI(
+            trackId = "1kdGYCHCff09E2FASM5IVY",
+            imageName = "https://i.scdn.co/image/ab67616d0000b2738ac80cfc486397adceeaf15a",
+            artistName = "ARASHI",
+            trackName = "A・RA・SHI"
+        ),
+        TrackAPI(
+            trackId = "0aaZG5azeJei81A2WptwC8",
+            imageName = "https://i.scdn.co/image/ab67616d0000b273302dfd429f8d589a7ae2c3af",
+            artistName = "Hump Back",
+            trackName = "拝啓、少年よ"
+        ),
+        TrackAPI(
+            trackId = "10Eyo4juZQFthKqlJgGMdp",
+            imageName = "https://i.scdn.co/image/ab67616d0000b273ae51734d04ef431b65a09a9a",
+            artistName = "back number",
+            trackName = "怪盗"
+        ),
         TrackAPI(
             trackId = "0Ns63lt28epRgED3Tnhmth",
             imageName = "https://i.scdn.co/image/ab67616d0000b27357a4e5830ef3e0aeee2874ce",
