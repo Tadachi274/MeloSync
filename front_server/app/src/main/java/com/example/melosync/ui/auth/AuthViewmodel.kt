@@ -10,6 +10,8 @@ import com.example.melosync.ui.auth.spotify.*
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import com.example.melosync.ui.auth.SignInWithGoogleFunctions  // 追加
+import java.util.UUID
 
 /**
  * 認証状態を表す UI モデル
@@ -39,25 +41,19 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
 
     /** ボタンなどから呼び出すサインイン処理 */
     fun signIn() {
-        println("SignIn Click")
+        Log.d("AuthViewModel","SignIn Click")
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
-                // Google ID トークン取得（ユーザー操作でダイアログが出ます）
-                val idToken = "example_user_id"  // :contentReference[oaicite:0]{index=0}
-                println("[AuthViewmodel]idToken: ${idToken}")
-                if (idToken != null) {
-                    // バックエンドとやりとりして JWT を取得
-                    val jwt = repository.exchangeIdToken(idToken)
-                    println("[AuthViewmodel]jwt:${jwt}")
-                    if (jwt != null) {
-                        repository.saveJwt(jwt)
-                        _uiState.update { it.copy(isLoggedIn = true) }
-                    } else {
-                        _uiState.update { it.copy(errorMessage = "サーバーから JWT を取得できませんでした") }
-                    }
+                // バックエンドとやりとりして JWT を取得
+                val jwt = repository.LoginRequest()
+                Log.d("AuthViewmodel","jwt:${jwt}")
+                if (jwt != null) {
+                    repository.saveJwt(jwt)
+                    _uiState.update { it.copy(isLoggedIn = true) }
+                    _uiState.update { it.copy(isSpotifyLoggedIn = false) }
                 } else {
-                    _uiState.update { it.copy(errorMessage = "サインインがキャンセルされました") }
+                    _uiState.update { it.copy(errorMessage = "サーバーから JWT を取得できませんでした") }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = e.localizedMessage) }
@@ -107,7 +103,15 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             // 永続化
             repository.setSpotifyLoggedIn(true)
-            _uiState.update { it.copy(isSpotifyLoggedIn = true) }
+            //_uiState.update { it.copy(isSpotifyLoggedIn = true) }
+            _uiState.update {
+                val updated = it.copy(isSpotifyLoggedIn = true)
+                Log.d("ViewModel", "Updating isSpotifyLoggedIn to: ${updated.isSpotifyLoggedIn}")
+                updated
+            }
+
+
+
         }
     }
 

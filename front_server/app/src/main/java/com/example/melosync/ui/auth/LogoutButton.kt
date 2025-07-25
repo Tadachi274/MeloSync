@@ -8,6 +8,6 @@ import androidx.compose.runtime.Composable
 @Composable
 fun LogoutButton(onClick: () -> Unit) {
     Button(onClick = onClick) {
-        Text("Googleログアウト")
+        Text("ログアウト")
     }
 }

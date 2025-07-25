@@ -1,5 +1,6 @@
 package com.example.melosync
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -19,12 +20,14 @@ import com.example.melosync.ui.theme.AppBackground
 import androidx.activity.viewModels
 import com.example.melosync.ui.auth.AuthRepository
 import com.example.melosync.ui.auth.AuthViewModel
-
 //import com.example.melosync.ui.theme.SpotifyEmotionAppTheme
+import android.util.Log
 
 class MainActivity : ComponentActivity() {
     private val authViewModel: AuthViewModel by viewModels()
-    val repository by lazy { AuthRepository(applicationContext) }
+    private val repository by lazy { AuthRepository(this) }
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -38,7 +41,9 @@ class MainActivity : ComponentActivity() {
                         color = MaterialTheme.colorScheme.background
                     ) {
                         // ナビゲーションを開始
-                        AppNavigation(authViewModel,repository)
+                        Log.d("MainActivity","open")
+                        AppNavigation(authViewModel)
+
                     }
 //                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
 //                    Greeting(
@@ -49,6 +54,31 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        Log.d("MainActivity","onNewIntent")
+        enableEdgeToEdge()
+        setContent {
+            MeloSyncTheme {
+                AppBackground {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        // ナビゲーションを開始
+                        Log.d("MainActivity","new open")
+                        AppNavigation(authViewModel)
+
+                    }
+//                    )
+//                }
+                }
+            }
+        }
+        setIntent(intent) // 新しいIntentで上書きする（省略すると getIntent() が古いままになる）
+
+        //handleIntent(intent)
     }
 }
 

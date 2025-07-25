@@ -1,14 +1,11 @@
 // ui/auth/AuthRepository.kt
 package com.example.melosync.ui.auth
 
-import com.example.melosync.R
 import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import androidx.datastore.preferences.core.booleanPreferencesKey
 
 private object PrefKeys {
@@ -19,10 +16,10 @@ class AuthRepository(private val ctx: Context) {
     private val JWT_KEY = stringPreferencesKey("jwt_token")
 
     /** ID トークンをバックエンドに送って JWT をもらう */
-    suspend fun exchangeIdToken(idToken: String): String? {
-        println("[AuthRepository.exchangeIdToken]exchangeIdToken")
-        val resp = NetworkModule.authApi.exchangeIdToken(IdTokenRequest(idToken))
-        println("[AuthRepository.exchangeIdToken]exchange.res:${resp}")
+    suspend fun LoginRequest(): String? {
+        println("[AuthRepository.LoginRequest]LoginRequest")
+        val resp = NetworkModule.authApi.LoginRequest()
+        println("[AuthRepository.LoginRequest]exchange.res:${resp}")
         return if (resp.isSuccessful) resp.body()?.access_token else null
     }
 

@@ -49,7 +49,7 @@ class SpotifyAuthCallbackActivity : ComponentActivity() {
                 val jwt = repository.getJwt()  // suspend 関数なので coroutine 内で呼び出し
                 Log.d(TAG,"jwt:${jwt}")
                 if (!jwt.isNullOrEmpty()) {
-                    Log.d(TAG,"sendCode" )
+                    Log.d(TAG,"sendCode:${code},jwt:${jwt}" )
                     sendCodeAndJwtToBackend(code, jwt)
                 } else {
                     Log.e("SpotifyAuth", "No JWT found")
@@ -59,10 +59,8 @@ class SpotifyAuthCallbackActivity : ComponentActivity() {
         else {
             Log.e(TAG, "認証エラー(error) = $error")
         }
-        finish()
     }
 
-//今は使っていない
     private fun sendCodeAndJwtToBackend(code: String, jwt: String) {
         val TAG = "SpotifyAuthCallback"
         val request = SpotifyCodeRequest(code)
@@ -75,13 +73,9 @@ class SpotifyAuthCallbackActivity : ComponentActivity() {
                 response: Response<SpotifyAuthResponse>
             ) {
                 if (response.isSuccessful) {
-                    val body = response.body()
-                    Log.d(TAG, "送信成功: jwt=${body?.jwt}, refreshToken=${body?.refreshToken}")
-                    // 必要ならここで UI 更新や次画面遷移などを行う
+                    Log.d(TAG, "送信成功")
                     lifecycleScope.launch {
-                        repository.setSpotifyLoggedIn(true)
-                        Log.d(TAG,"SpotifyLoggedIn:${repository.getSpotifyLoggedIn()}")
-                        // 必要に応じて JWT も保存
+                        authViewModel.onSpotifyLoginSuccess()
                     }
                     startActivity(
                         Intent(
