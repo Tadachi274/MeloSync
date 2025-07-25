@@ -1,5 +1,6 @@
 package com.example.melosync.data.api
 
+import com.google.gson.annotations.SerializedName
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -16,10 +17,53 @@ interface ApiService {
         @Field("code") code: String
     ): Response<TokenResponse>
 
+    /**
+     * (1) doClassify: ボディなし、返り値なし
+     * ヘッダーにJWTを付与してPOSTリクエストを送信します。
+     */
+    @POST("api/classify")
+    suspend fun doClassify(
+        @Header("Authorization") token: String
+    ): Response<Unit> // 返り値がない場合はUnitを指定
+
+    /**
+     * (2) getEmotionPlaylist: フォーム形式のボディ、返り値あり
+     * ヘッダーにJWTを付与し、リクエストボディをフォーム形式で送信します。
+     */
+    @FormUrlEncoded
+    @POST("api/playlist/emotion")
+    suspend fun getEmotionPlaylist(
+        @Header("Authorization") token: String,
+        @Field("before_emotion") before_emotion: String,
+        @Field("after_emotion") after_emotion: String,
+        @Field("chosen_playlists") chosen_playlists: List<String> // List<String>として送信
+    ): Response<EmotionPlaylistResponse>
+
+    /**
+     * (3) getPlaylistList: ボディなし、返り値あり
+     * ヘッダーにJWTを付与してPOSTリクエストを送信します。
+     */
+    @POST("api/playlist")
+    suspend fun getPlaylistList(
+        @Header("Authorization") token: String
+    ): Response<PlaylistListResponse>
+
+//    /**
+//     * (4) getAccessToken: ボディなし、返り値なし
+//     * ヘッダーにJWTを付与してGETリクエストを送信します。
+//     */
+//    @GET("api/token")
+//    suspend fun getAccessToken(
+//        @Header("Authorization") token: String
+//    ): Response<Unit> // 返り値がない場合はUnitを指定
+
+
     @POST("api/playlist/recommend")
     suspend fun getRecommendedPlaylist(
         @Body emotionRequest: EmotionRequest
     ): Response<PlaylistResponse>
+
+
 
     // --- Spotify Web APIとの通信 ---
 
@@ -83,6 +127,43 @@ data class EmotionRequest(
     val emotion: String
 )
 
+// (2) getEmotionPlaylistのレスポンス用
+data class EmotionPlaylistResponse(
+    val data: List<TrackAPI>
+)
+
+data class TrackAPI(
+    @SerializedName("track_id")
+    val trackId: String,
+
+    @SerializedName("track_name")
+    val trackName: String,
+
+    @SerializedName("artist_name")
+    val artistName: String,
+
+    @SerializedName("image_url")
+    val imageName: String
+)
+
+// (3) getPlaylistのレスポンス用
+data class PlaylistListResponse(
+    val data: List<Playlist>
+)
+
+data class Playlist(
+    @SerializedName("playlist_id")
+    val playlistId: String,
+
+    @SerializedName("playlist_name")
+    val playlistName: String,
+
+    @SerializedName("image_url") // JSONのキーが "image_name" の場合は "image_name" に修正してください
+    val imageUrl: String,
+
+    var isActive: Boolean = true
+)
+
 data class TokenResponse(
     val accessToken: String
 )
@@ -102,7 +183,7 @@ data class CurrentlyPlayingContext(
 )
 
 data class TrackObject(
-    val id: String,
+    val trackId: String,
     val name: String,
     val artists: List<ArtistObject>,
     val album: AlbumObject
