@@ -8,6 +8,9 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.melosync.data.api.ApiService
+import com.example.melosync.data.api.Playlist
+import com.example.melosync.data.api.TrackAPI
+import com.example.melosync.data.SendEmotion
 import android.graphics.Bitmap
 import com.example.melosync.data.api.CurrentlyPlayingContext
 import com.example.melosync.data.api.PlayRequest
@@ -24,6 +27,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 
@@ -34,28 +38,50 @@ class SpotifyViewModel : ViewModel() {
 
     // バックエンドとの通信用
     private val backendApiService: ApiService = RetrofitClient.backendApi
+
     // Spotify Web APIとの通信用
     private val spotifyApiService: ApiService = RetrofitClient.spotifyApi
+
+    // 直前のPlayerStateを保持するための変数
+    private var previousPlayerState: PlayerState? = null
+
     // App Remoteの接続状態
     private val _appRemote = MutableStateFlow<SpotifyAppRemote?>(null)
     val appRemote = _appRemote.asStateFlow()
+
     // 現在のトラック情報
     private val _currentTrack = MutableStateFlow<Track?>(null)
     val currentTrack = _currentTrack.asStateFlow()
+
     // 現在のPlayerStateを保持する (再生位置や曲の長さも含む)
     private val _playerState = MutableStateFlow<PlayerState?>(null)
     val playerState = _playerState.asStateFlow()
+
     // アクセストークン
     private val _accessToken = MutableStateFlow<String?>(null)
     val accessToken = _accessToken.asStateFlow()
+
+    //バックエンド認証用のJWTを保持する変数
+    private val _jwt = MutableStateFlow<String?>("ced2ee375b444183a40d0a95de22d132")
+    val jwt = _jwt.asStateFlow()
+
     //再生の待ち列
-    private val _playbackQueue = MutableStateFlow<List<String>>(emptyList())
+    private val _playbackQueue = MutableStateFlow<List<TrackAPI>>(emptyList())
     val playbackQueue = _playbackQueue.asStateFlow()
+
     // ★追加：現在のアルバムアートを保持する
     private val _currentTrackImage = MutableStateFlow<Bitmap?>(null)
     val currentTrackImage = _currentTrackImage.asStateFlow()
 
+    //
+    private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
+    val playlists = _playlists.asStateFlow()
 
+    private val _isLoading = MutableStateFlow<Boolean>(false)
+    val isLoading = _isLoading.asStateFlow()
+
+    private val _error = MutableStateFlow<String?>(null)
+    val error = _error.asStateFlow()
     // --- App Remote SDKの接続フロー ---
 
     /**
@@ -138,6 +164,10 @@ class SpotifyViewModel : ViewModel() {
         }
     }
 
+    fun setJwt(token: String?) {
+        _jwt.value = token
+    }
+
     // --- Web APIを使った再生コントロール ---
 
     /**
@@ -165,6 +195,102 @@ class SpotifyViewModel : ViewModel() {
 //                    }
 //                }
 //            }
+        }
+    }
+
+    fun classify() {
+        viewModelScope.launch {
+            val token = _jwt.value // ★accessTokenからjwtに変更
+            if (token == null) {
+                Log.e("SpotifyViewModel", "JWT is not available.")
+                return@launch
+            }
+            val authHeader = "Bearer $token"
+            _isLoading.value = true
+            try {
+                val response = backendApiService.doClassify(authHeader)
+                if (!response.isSuccessful) {
+                    _error.value = "Classify failed: ${response.code()}"
+                }
+            } catch (e: Exception) {
+                _error.value = "Error: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun fetchEmotionPlaylist(
+        beforeEmotion: SendEmotion,
+        afterEmotion: SendEmotion,
+        chosenPlaylists: List<String>
+    ) {
+        viewModelScope.launch {
+            // 1. JWTの準備
+            val token = _jwt.value // ★accessTokenからjwtに変更
+            if (token == null) {
+                Log.e("SpotifyViewModel", "JWT is not available.")
+                return@launch
+            }
+            // Bearerプレフィックスは通常、ヘッダーに含めます
+            val authHeader = "Bearer $token"
+
+            // 2. 引数の準備
+            val beforeEmotionStr = beforeEmotion.name
+            val afterEmotionStr = afterEmotion.name
+            _isLoading.value = true
+
+            try {
+                // 3. API呼び出しの実行
+                val response = backendApiService.getEmotionPlaylist(
+                    token = authHeader, // ★JWTを渡す
+                    before_emotion = beforeEmotionStr,
+                    after_emotion = afterEmotionStr,
+                    chosen_playlists = chosenPlaylists
+                )
+                // 4. 結果のハンドリング
+                if (response.isSuccessful) {
+                    val playlistResponse = response.body()
+                    playlistResponse?.data?.let { tracks ->
+                        _playbackQueue.value = tracks
+                        Log.d("SpotifyViewModel", "Successfully fetched ${tracks.size} tracks.")
+                    }
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    _error.value = "Playlist fetch failed: ${response.code()}"
+                    Log.e("SpotifyViewModel", "API Error: ${response.code()} $errorBody")
+                }
+            } catch (e: Exception) {
+                _error.value = "Error: ${e.message}"
+                Log.e("SpotifyViewModel", "Network request failed", e)
+            }
+            finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun fetchPlaylistList() {
+        viewModelScope.launch {
+            val token = _jwt.value // ★accessTokenからjwtに変更
+            if (token == null) {
+                Log.e("SpotifyViewModel", "JWT is not available.")
+                return@launch
+            }
+            val authHeader = "Bearer $token"
+            _isLoading.value = true
+            try {
+                val response = backendApiService.getPlaylistList(authHeader)
+                if (response.isSuccessful) {
+                    _playlists.value = response.body()?.data ?: emptyList()
+                } else {
+                    _error.value = "Playlist fetch failed: ${response.code()}"
+                }
+            } catch (e: Exception) {
+                _error.value = "Error: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 
@@ -203,8 +329,174 @@ class SpotifyViewModel : ViewModel() {
 
     }
 
+    fun loadPlaylists() {
+        // viewModelScopeでコルーチンを開始
+        viewModelScope.launch {
+            // TODO: ここで実際にバックエンドAPIを呼び出す
+//            fetchPlaylistList()
+            // 今回はダミーデータを表示
+            _playlists.value = dummyPlaylists
+        }
+    }
+
+
+    private fun abstractionChosenPlaylists(): List<String> {
+        val activePlaylistIds = _playlists.value.filter { it.isActive }.map { it.playlistId }
+        return activePlaylistIds
+    }
+
+    fun loadQueue() {
+        viewModelScope.launch {
+            // TODO: ここで実際にバックエンドAPIを呼び出す
+            val chosenPlaylists = abstractionChosenPlaylists()
+//            fetchEmotionPlaylist(SendEmotion.HAPPY, SendEmotion.RELAX, chosenPlaylists = chosenPlaylists)
+            // 今回はダミーデータを表示
+            _playbackQueue.value = dummyTrackLists
+        }
+    }
+
+    /**
+     * プレイリストの選択状態をトグルする
+     * @param playlistId トグル対象のプレイリストID
+     */
+    fun togglePlaylistSelection(playlistId: String) {
+        _playlists.update { currentPlaylists ->
+            currentPlaylists.map { playlist ->
+                if (playlist.playlistId == playlistId) {
+                    // isActivateの状態を反転させた新しいインスタンスを返す
+                    playlist.copy(isActive = !playlist.isActive)
+                } else {
+                    playlist
+                }
+            }
+        }
+    }
+
+    fun truePlaylistAll() {
+        _playlists.update { currentPlaylists ->
+            currentPlaylists.map { playlist ->
+                playlist.copy(isActive = true)
+            }
+        }
+    }
+    fun falsePlaylistAll() {
+        _playlists.update { currentPlaylists ->
+            currentPlaylists.map { playlist ->
+                playlist.copy(isActive = false)
+            }
+        }
+    }
     override fun onCleared() {
         super.onCleared()
         disconnect()
     }
+
+    private val dummyTrackLists = listOf(
+        TrackAPI(
+            trackId = "0Ns63lt28epRgED3Tnhmth",
+            imageName = "https://i.scdn.co/image/ab67616d0000b27357a4e5830ef3e0aeee2874ce",
+            artistName = "ARASHI",
+            trackName = "Happiness"
+        ),
+        TrackAPI(
+            trackId = "1kdGYCHCff09E2FASM5IVY",
+            imageName = "https://i.scdn.co/image/ab67616d0000b2738ac80cfc486397adceeaf15a",
+            artistName = "ARASHI",
+            trackName = "A・RA・SHI"
+        ),
+        TrackAPI(
+            trackId = "0aaZG5azeJei81A2WptwC8",
+            imageName = "https://i.scdn.co/image/ab67616d0000b273302dfd429f8d589a7ae2c3af",
+            artistName = "Hump Back",
+            trackName = "拝啓、少年よ"
+        ),
+        TrackAPI(
+            trackId = "10Eyo4juZQFthKqlJgGMdp",
+            imageName = "https://i.scdn.co/image/ab67616d0000b273ae51734d04ef431b65a09a9a",
+            artistName = "back number",
+            trackName = "怪盗"
+        )
+    )
+
+    // プレイリストのダミーデータ
+    private val dummyPlaylists = listOf(
+        Playlist(
+            playlistId = "75kV4GQqqjaxNSLImhDPyC",
+//            imageUrl = "https://mosaic.scdn.co/640/ab67616d00001e0257a4e5830ef3e0aeee2874ceab67616d00001e028ac80cfc486397adceeaf15aab67616d00001e029cbe133c32610c326ec72a53ab67616d00001e02bf24352caf35d83d05519573",
+            imageUrl = "https://i.scdn.co/image/ab67616d0000b27387d3260cd0a28a2f42d5d29e",
+            playlistName = "melosync"
+        ),
+        Playlist(
+            playlistId = "3OKozqqZdZojBJC85nQMOj",
+//            imageUrl = "https://mosaic.scdn.co/640/ab67616d00001e0257a4e5830ef3e0aeee2874ceab67616d00001e028ac80cfc486397adceeaf15aab67616d00001e029cbe133c32610c326ec72a53ab67616d00001e02bf24352caf35d83d05519573",
+//            imageUrl = "https://mosaic.scdn.co/640/ab67616d00001e020d0ebed90b54dc171c4b45d9ab67616d00001e02bf7c8b0d4f1eee0674561d87ab67616d00001e02c1b23fe0879585e9504168d7ab67616d00001e02f7ba0909eb3c7e47f6773944",
+            imageUrl = "https://i.scdn.co/image/ab67616d0000b273ae51734d04ef431b65a09a9a",
+            playlistName = "meloSync"
+        ),
+        Playlist(
+            playlistId = "1NqZGxfmtJYwwIg7BsImil",
+            imageUrl = "https://mosaic.scdn.co/640/ab67616d00001e022182bcbffb38e1195f896a90ab67616d00001e022d41c4dbcfb172ba5c992a3cab67616d00001e0264be01336a8f917538a60b74ab67616d00001e02ee9ddd9ff22b6ea5458b8f29",
+            playlistName = "RUSH BALL 2024"
+        ),
+        Playlist(
+            playlistId = "66ISSxGFVWjYoDUE7YZkJT",
+            imageUrl = "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84229519873e5353486b72f1c8",
+            playlistName = "METROCK大阪~2023.day1"
+        ),
+        Playlist(
+            playlistId = "4GzK5dvJgDLq8XrBaguZsC",
+            imageUrl = "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000d72ca806555973eea7db13b4c7fd",
+            playlistName = "cell,core 2022"
+        ),
+        Playlist(
+            playlistId = "1:75kV4GQqqjaxNSLImhDPyC",
+            imageUrl = "https://mosaic.scdn.co/640/ab67616d00001e0257a4e5830ef3e0aeee2874ceab67616d00001e028ac80cfc486397adceeaf15aab67616d00001e029cbe133c32610c326ec72a53ab67616d00001e02bf24352caf35d83d05519573",
+            playlistName = "melosync"
+        ),
+        Playlist(
+            playlistId = "1:3OKozqqZdZojBJC85nQMOj",
+            imageUrl = "https://mosaic.scdn.co/640/ab67616d00001e020d0ebed90b54dc171c4b45d9ab67616d00001e02bf7c8b0d4f1eee0674561d87ab67616d00001e02c1b23fe0879585e9504168d7ab67616d00001e02f7ba0909eb3c7e47f6773944",
+            playlistName = "meloSync"
+        ),
+        Playlist(
+            playlistId = "1:1NqZGxfmtJYwwIg7BsImil",
+            imageUrl = "https://mosaic.scdn.co/640/ab67616d00001e022182bcbffb38e1195f896a90ab67616d00001e022d41c4dbcfb172ba5c992a3cab67616d00001e0264be01336a8f917538a60b74ab67616d00001e02ee9ddd9ff22b6ea5458b8f29",
+            playlistName = "RUSH BALL 2024"
+        ),
+        Playlist(
+            playlistId = "1:66ISSxGFVWjYoDUE7YZkJT",
+            imageUrl = "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84229519873e5353486b72f1c8",
+            playlistName = "METROCK大阪~2023.day1"
+        ),
+        Playlist(
+            playlistId = "1:4GzK5dvJgDLq8XrBaguZsC",
+            imageUrl = "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000d72ca806555973eea7db13b4c7fd",
+            playlistName = "cell,core 2022"
+        ),
+        Playlist(
+            playlistId = "2:75kV4GQqqjaxNSLImhDPyC",
+            imageUrl = "https://mosaic.scdn.co/640/ab67616d00001e0257a4e5830ef3e0aeee2874ceab67616d00001e028ac80cfc486397adceeaf15aab67616d00001e029cbe133c32610c326ec72a53ab67616d00001e02bf24352caf35d83d05519573",
+            playlistName = "melosync"
+        ),
+        Playlist(
+            playlistId = "2:3OKozqqZdZojBJC85nQMOj",
+            imageUrl = "https://mosaic.scdn.co/640/ab67616d00001e020d0ebed90b54dc171c4b45d9ab67616d00001e02bf7c8b0d4f1eee0674561d87ab67616d00001e02c1b23fe0879585e9504168d7ab67616d00001e02f7ba0909eb3c7e47f6773944",
+            playlistName = "meloSync"
+        ),
+        Playlist(
+            playlistId = "2:1NqZGxfmtJYwwIg7BsImil",
+            imageUrl = "https://mosaic.scdn.co/640/ab67616d00001e022182bcbffb38e1195f896a90ab67616d00001e022d41c4dbcfb172ba5c992a3cab67616d00001e0264be01336a8f917538a60b74ab67616d00001e02ee9ddd9ff22b6ea5458b8f29",
+            playlistName = "RUSH BALL 2024"
+        ),
+        Playlist(
+            playlistId = "2:66ISSxGFVWjYoDUE7YZkJT",
+            imageUrl = "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84229519873e5353486b72f1c8",
+            playlistName = "METROCK大阪~2023.day1"
+        ),
+        Playlist(
+            playlistId = "2:4GzK5dvJgDLq8XrBaguZsC",
+            imageUrl = "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000d72ca806555973eea7db13b4c7fd",
+            playlistName = "cell,core 2022"
+        )
+    )
 }
