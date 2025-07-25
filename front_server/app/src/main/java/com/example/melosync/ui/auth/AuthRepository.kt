@@ -16,7 +16,7 @@ class AuthRepository(private val ctx: Context) {
     private val JWT_KEY = stringPreferencesKey("jwt_token")
 
     /** ID トークンをバックエンドに送って JWT をもらう */
-    suspend fun LoginRequest(): String? {
+    suspend fun loginRequest(): String? {
         println("[AuthRepository.LoginRequest]LoginRequest")
         val resp = NetworkModule.authApi.LoginRequest()
         println("[AuthRepository.LoginRequest]exchange.res:${resp}")
@@ -49,14 +49,5 @@ class AuthRepository(private val ctx: Context) {
         dataStore.edit { prefs ->
             prefs[PrefKeys.SPOTIFY_LOGGED_IN] = loggedIn
         }
-    }
-    suspend fun getSpotifyLoggedIn(): Boolean? {
-        val prefs = dataStore.data.first()  // kotlinx.coroutines.flow.first を使います
-        return prefs[PrefKeys.SPOTIFY_LOGGED_IN]
-    }
-
-    suspend fun hasSpotifyLoggedIn(): Boolean {
-        val prefs = dataStore.data.first()
-        return prefs[PrefKeys.SPOTIFY_LOGGED_IN] ?: false
     }
 }

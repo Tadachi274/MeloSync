@@ -46,9 +46,6 @@ fun AppNavigation(
     ) {
         composable(Routes.LOGIN) {
             LoginScreen(
-                onNavigateToHome = {
-                    navController.navigate("home")
-                },
                 authViewModel = authViewModel
             )
         }
