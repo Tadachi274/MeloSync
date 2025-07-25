@@ -24,9 +24,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
-    onNavigateToHome: () -> Unit,
     authViewModel: AuthViewModel,
-
 ) {
     // ViewModel の UI 状態を監視
     val uiState by authViewModel.uiState.collectAsState()
@@ -71,14 +69,6 @@ fun LoginScreen(
                     }) {
                         Text("Spotifyで認証")
                     }
-                    // Button(
-                    //    onClick = {
-                    //        val intent = Intent(context, MainActivity::class.java)
-                    //        context.startActivity(intent)
-                    //    }
-                    //) {
-                    //    Text("ホーム画面へ")
-                    //}
                     Spacer(modifier = Modifier.height(120.dp))
                     LogoutButton { authViewModel.logout() }
                 }
