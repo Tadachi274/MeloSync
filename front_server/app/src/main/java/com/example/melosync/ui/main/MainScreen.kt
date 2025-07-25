@@ -11,6 +11,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.Image
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -66,7 +70,11 @@ import androidx.compose.ui.layout.ContentScale
 import coil.ImageLoader
 import okhttp3.OkHttpClient
 import coil.compose.AsyncImage
-
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.material3.Divider
+import androidx.compose.foundation.layout.navigationBarsPadding
 
 @OptIn(ExperimentalMaterial3Api::class) // TopAppBar用に追記
 @Composable
@@ -254,6 +262,7 @@ fun MainScreen(
 //                        Toast.makeText(context, "プレイリスト更新は後で実装します", Toast.LENGTH_SHORT).show()
 //                        spotifyViewModel.play("spotify:track:7v6DqVMaljJDUXYavMY4kf")
                         spotifyViewModel.loadQueue()
+//                        spotifyViewModel.play("spotify:track:${playbackQueue[0].trackId}")
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = AppPurple2,
@@ -484,19 +493,19 @@ fun SpotifyPlayerUI(
     val currentTrack = playerState?.track
     var showQueue by remember { mutableStateOf(false) }
     if (showQueue) {
-//        FullScreenQueue(
-//            playerState = playerState,
-//            trackImage = trackImage,
-//            queue = queue,
-//            imageLoader = imageLoader,
-//            onClose = { showQueue = false },
-//            onPauseClick = onPauseClick,
-//            onResumeClick = onResumeClick,
-//            onSeekTo = onSeekTo,
-//            onSkipPreviousClick = onSkipPreviousClick,
-//            onSkipNextClick = onSkipNextClick,
-//            onPlayItem = onPlayItem
-//        )
+        FullScreenQueue(
+            playerState = playerState,
+            trackImage = trackImage,
+            queue = queue,
+            imageLoader = imageLoader,
+            onClose = { showQueue = false },
+            onPauseClick = onPauseClick,
+            onResumeClick = onResumeClick,
+            onSeekTo = onSeekTo,
+            onSkipPreviousClick = onSkipPreviousClick,
+            onSkipNextClick = onSkipNextClick,
+            onPlayItem = onPlayItem
+        )
     }
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -548,12 +557,12 @@ fun SpotifyPlayerUI(
                         )
                     }
                     // ★追加：キュー表示切り替えボタン
-                    IconButton(onClick = { showQueue = !showQueue }) {
+                    IconButton(onClick = { showQueue = true }) {
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowUp,
                             contentDescription = "キューを表示",
-                            // showQueueがtrueのとき180度回転させて「v」にする
-                            modifier = Modifier.rotate(if (showQueue) 180f else 0f)
+//                            // showQueueがtrueのとき180度回転させて「v」にする
+//                            modifier = Modifier.rotate(if (showQueue) 180f else 0f)
                         )
                     }
                 }
@@ -593,17 +602,39 @@ fun SpotifyPlayerUI(
                 }
 
                 // 再生中かつユーザーが操作していないときに、スライダーを滑らかに進めるためのタイマーです。
-                LaunchedEffect(isPaused, isSeeking) {
+//                LaunchedEffect(isPaused, isSeeking) {
+//                    // 再生中で、ユーザーがシークバーを操作していない場合にのみループを実行
+//                    if (!isPaused && !isSeeking) {
+//                        while (true) {
+//                            delay(200L) // 0.2秒ごとにスライダーを更新
+//                            if (sliderPosition < trackDuration) {
+//                                sliderPosition += 200f
+//                            }
+//                        }
+//                    }
+//                }
+                LaunchedEffect(isPaused, isSeeking, trackDuration, currentTrack?.uri) {
                     // 再生中で、ユーザーがシークバーを操作していない場合にのみループを実行
                     if (!isPaused && !isSeeking) {
                         while (true) {
                             delay(200L) // 0.2秒ごとにスライダーを更新
-                            if (sliderPosition < trackDuration) {
+
+                            // スライダーが曲の最後に達したかチェック
+                            if (sliderPosition < trackDuration-800f) {
+                                // まだの場合はスライダーを進める
                                 sliderPosition += 200f
+                            } else {
+                                // 曲の最後に達した場合 (または超えた場合)
+                                if (trackDuration > 0) { // durationが0でないことを確認
+                                    onSkipNextClick()
+                                }
+                                // ループを抜けてタイマーを停止
+                                break
                             }
                         }
                     }
                 }
+
 
                 Slider(
                     value = sliderPosition.coerceIn(0f, trackDuration.toFloat()), // 値が意図せず範囲外になることを防ぐ
@@ -688,31 +719,31 @@ fun SpotifyPlayerUI(
                         Text("曲名", style = MaterialTheme.typography.titleMedium)
                         Text("アーティスト名", style = MaterialTheme.typography.bodyMedium)
                     }
-                    //テストよう
-                    IconButton(onClick = { showQueue = !showQueue }) {
+//                    //テストよう
+                    IconButton(onClick = { showQueue = true }) {
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowUp,
                             contentDescription = "キューを表示",
-                            // showQueueがtrueのとき180度回転させて「v」にする
-                            modifier = Modifier.rotate(if (showQueue) 180f else 0f)
+//                            // showQueueがtrueのとき180度回転させて「v」にする
+//                            modifier = Modifier.rotate(if (showQueue) 180f else 0f)
                         )
                     }
                 }
-                AnimatedVisibility(visible = showQueue) {
-                    // 長いリストでもパフォーマンスが良いようにLazyColumnを使用
-                    LazyColumn(
-                        // リストが長くなりすぎないように高さを制限
-                        modifier = Modifier.heightIn(max = 200.dp).padding(top = 8.dp)
-                    ) {
-                        items(queue) { track ->
-                            QueueItem(
-                                track = track,
-                                imageLoader = imageLoader,
-                                onPlayItem = {onPlayItem(track.trackId)}
-                            ) // 各アイテムのUI
-                        }
-                    }
-                }
+//                AnimatedVisibility(visible = showQueue) {
+//                    // 長いリストでもパフォーマンスが良いようにLazyColumnを使用
+//                    LazyColumn(
+//                        // リストが長くなりすぎないように高さを制限
+//                        modifier = Modifier.heightIn(max = 200.dp).padding(top = 8.dp)
+//                    ) {
+//                        items(queue) { track ->
+//                            QueueItem(
+//                                track = track,
+//                                imageLoader = imageLoader,
+//                                onPlayItem = {onPlayItem(track.trackId)}
+//                            ) // 各アイテムのUI
+//                        }
+//                    }
+//                }
 
                 Spacer(Modifier.height(16.dp))
                 Button(
@@ -730,12 +761,19 @@ fun SpotifyPlayerUI(
 }
 
 @Composable
-fun QueueItem(track: TrackAPI,imageLoader: ImageLoader,onPlayItem: () -> Unit) {
+fun QueueItem(track: TrackAPI,imageLoader: ImageLoader,onPlayItem: () -> Unit,isCurrentlyPlaying: Boolean) {
+    val backgroundColor = if (isCurrentlyPlaying) {
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+    } else {
+        Color.Transparent
+    }
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
 //            .size(50.dp)
+            .background(backgroundColor, shape = MaterialTheme.shapes.medium) // ★背景色を適用
             .clickable { onPlayItem() }
             .padding(vertical = 2.dp)
     ) {
@@ -784,5 +822,186 @@ fun rememberCustomImageLoader(context: Context): ImageLoader {
                     .build()
             }
             .build()
+    }
+}
+
+@Composable
+fun FullScreenQueue(
+    playerState: PlayerState?,
+    trackImage: Bitmap?,
+    queue: List<TrackAPI>,
+    imageLoader: ImageLoader,
+    onClose: () -> Unit,
+    onPauseClick: () -> Unit,
+    onResumeClick: () -> Unit,
+    onSeekTo: (Long) -> Unit,
+    onSkipPreviousClick: () -> Unit,
+    onSkipNextClick: () -> Unit,
+    onPlayItem: (String) -> Unit
+) {
+    val currentTrack = playerState?.track
+    val currentPlayingTrackId = playerState?.track?.uri?.substringAfter("spotify:track:")
+
+    Dialog(
+        onDismissRequest = onClose,
+//        properties = DialogProperties(usePlatformDefaultWidth = false) // 全画面表示
+    ) {
+        // ✅ Scaffoldを使って画面の主要領域を構成
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = MaterialTheme.colorScheme.surface,
+            topBar = {
+                // --- ✅ 上部：再生中の曲と閉じるボタン ---
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 8.dp, top = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // 再生中の曲情報
+                        Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                            trackImage?.let {
+                                Image(
+                                    bitmap = it.asImageBitmap(),
+                                    contentDescription = "Album Art",
+                                    modifier = Modifier.size(56.dp)
+                                )
+                            } ?: Box(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .background(Color.Gray),
+                                contentAlignment = Alignment.Center
+                            ) { Text("Art", color = Color.White) }
+
+                            Spacer(Modifier.width(16.dp))
+
+                            Column {
+                                Text(
+                                    text = currentTrack?.name ?: "曲が選択されていません",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    maxLines = 1,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = currentTrack?.artist?.name ?: "",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 1,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        // 閉じるボタン
+                        IconButton(onClick = onClose) {
+                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "閉じる")
+                        }
+                    }
+                    Divider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                }
+            },
+            bottomBar = {
+                // --- ✅ 下部：再生コントロールパネル ---
+                Column(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.surface)
+                        .navigationBarsPadding() // システムナビゲーションバーとの重なりを回避
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    val trackDuration = currentTrack?.duration ?: 0L
+                    val playbackPosition = playerState?.playbackPosition ?: 0L
+                    val isPaused = playerState?.isPaused ?: true
+                    var sliderPosition by remember { mutableFloatStateOf(0f) }
+                    var isSeeking by remember { mutableStateOf(false) }
+
+                    LaunchedEffect(playbackPosition) {
+                        if (!isSeeking) {
+                            sliderPosition = playbackPosition.toFloat()
+                        }
+                    }
+
+                    LaunchedEffect(isPaused, isSeeking) {
+                        if (!isPaused && !isSeeking) {
+                            while (true) {
+                                delay(200L)
+                                if (sliderPosition < trackDuration) {
+                                    sliderPosition += 200f
+                                }
+                            }
+                        }
+                    }
+
+                    Slider(
+                        value = sliderPosition.coerceIn(0f, trackDuration.toFloat()),
+                        onValueChange = {
+                            isSeeking = true
+                            sliderPosition = it
+                        },
+                        onValueChangeFinished = {
+                            onSeekTo(sliderPosition.toLong())
+                            isSeeking = false
+                        },
+                        valueRange = 0f..(trackDuration.toFloat().takeIf { it > 0f } ?: 1f),
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = SliderDefaults.colors(
+                            thumbColor = AppPurple2,
+                            activeTrackColor = AppPurple2,
+                            inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f)
+                        )
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = onSkipPreviousClick) {
+                            Icon(painter = painterResource(id = R.drawable.skip_previous), contentDescription = "前の曲へ", modifier = Modifier.size(32.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        FilledIconButton(
+                            onClick = if (playerState?.isPaused == true) onResumeClick else onPauseClick,
+                            modifier = Modifier.size(56.dp),
+                            colors = IconButtonDefaults.filledIconButtonColors(containerColor = AppPurple2, contentColor = MaterialTheme.colorScheme.onPrimary)
+                        ) {
+                            if (playerState?.isPaused == true) {
+                                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "再開", modifier = Modifier.size(36.dp))
+                            } else {
+                                Icon(painter = painterResource(id = R.drawable.pause), contentDescription = "一時停止", modifier = Modifier.size(36.dp))
+                            }
+                        }
+                        IconButton(onClick = onSkipNextClick) {
+                            Icon(painter = painterResource(id = R.drawable.skip), contentDescription = "次の曲へ", modifier = Modifier.size(32.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+        ) { paddingValues ->
+            // --- ✅ 中央：キューリスト ---
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues) // Scaffoldが計算したpaddingを適用
+                    .padding(horizontal = 16.dp)
+            ) {
+                item {
+                    Text(
+                        text = "次に再生",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                    )
+                }
+                items(queue) { track ->
+                    val isPlaying = track.trackId == currentPlayingTrackId
+                    QueueItem(
+                        track = track,
+                        imageLoader = imageLoader,
+                        onPlayItem = { onPlayItem(track.trackId) },
+                        isCurrentlyPlaying = isPlaying
+                    )
+                    Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+                }
+            }
+        }
     }
 }
