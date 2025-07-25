@@ -24,19 +24,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.melosync.data.Emotion
 
-import com.example.melosync.ui.auth.LoginScreen
 import com.example.melosync.ui.auth.AuthViewModel
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.LifecycleOwner
-import com.example.melosync.ui.auth.SignInWithGoogleFunctions
-import com.example.melosync.ui.auth.AuthRepository
 import com.example.melosync.ui.auth.LogoutButton
-import kotlinx.coroutines.launch
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.lifecycle.compose.LocalLifecycleOwner
 
 @Composable
 fun HomeScreen(
@@ -76,6 +65,7 @@ fun HomeScreen(
                     )
                 }
             }
+            Spacer(modifier = Modifier.height(120.dp))
             LogoutButton { authViewModel.logout() }
         }
     }
