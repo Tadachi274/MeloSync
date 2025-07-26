@@ -8,6 +8,7 @@ import json
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder 
 from sklearn.compose import ColumnTransformer 
 import joblib 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 def get_soundstat_track_info(spotify_track_id: str):
     """
@@ -58,22 +59,6 @@ def get_soundstat_track_info(spotify_track_id: str):
     
     return None
 
-# # --- 以下、実行例 ---
-# if __name__ == "__main__":
-#     # 情報を取得したいSpotifyのトラックIDを指定
-#     # 例: 嵐 - 「HAPPINESS」
-#     track_id_to_analyze = "0Ns63lt28epRgED3Tnhmth" 
-
-#     # 関数を呼び出して楽曲情報を取得
-#     track_info = get_soundstat_track_info(track_id_to_analyze)
-
-#     # 結果を出力
-#     if track_info:
-#         print("\n✅ 楽曲情報の取得に成功しました。")
-#         # 結果をきれいにフォーマットして表示
-#         print(json.dumps(track_info, indent=2, ensure_ascii=False))
-    
-
 def extract_track_id_from_url(url):
     try:
         parsed_url = urlparse(url)
@@ -96,11 +81,6 @@ def preprocess_music_data(input_csv, output_csv):
 
     # 欠損値除去
     df = df.dropna()
-
-    # 文字列カラムのトリム
-    str_cols = df.select_dtypes(include='object').columns
-    for col in str_cols:
-        df[col] = df[col].str.strip()
 
     # 一旦、全カラムを残す
     features_list = []
@@ -150,7 +130,7 @@ def preprocess_music_data(input_csv, output_csv):
                 'beats_regularity': track_info['features']['beats']['regularity'],
             }
             features_list.append(features)
-            time.sleep(0.1)  # API制限対策
+            # time.sleep(0.1)  # API制限対策
         except Exception as e:
             print(f"エラーが発生しました: {e}")
             fail_list.append({track_id})
@@ -291,83 +271,77 @@ def normalize_and_encode_dataframe(df):
     return df
 
 def process_tracks_directly(track_ids: list) -> pd.DataFrame:
-    """
-    トラックIDのリストを受け取り、SoundStat APIから特徴量を取得し、
-    pre_process_normalize.pyと同じ前処理を行ってDataFrameを返します。
-    CSVを介さずに直接処理します。
-    """
     if not track_ids:
         return pd.DataFrame()
 
     features_list = []
     fail_list = []
-    
-    for idx, track_id in enumerate(track_ids):
-        print(f"処理中: {idx+1}/{len(track_ids)} - {track_id}")
-        
-        track_info = get_soundstat_track_info(track_id)
-        
-        if track_info is None:
-            fail_list.append(track_id)
-            print(f"track_id: {track_id} の情報が取得できませんでした。")
-            continue
-        
-        try:
-            # pre_process_normalize.pyと同じ特徴量抽出（modeとgenreを除外）
-            features = {
-                'id': track_info['id'],
-                'name': track_info['name'],
-                'artists': track_info['artists'],
-                'popularity': track_info['popularity'],
-                'duration_ms': track_info['duration_ms'],
 
-                # Audio features（modeを除外）
-                'tempo': track_info['features']['tempo'],
-                'key': track_info['features']['key'],
-                'key_confidence': track_info['features']['key_confidence'],
-                'energy': track_info['features']['energy'],
-                'danceability': track_info['features']['danceability'],
-                'valence': track_info['features']['valence'],
-                'instrumentalness': track_info['features']['instrumentalness'],
-                'acousticness': track_info['features']['acousticness'],
-                'loudness': track_info['features']['loudness'],
+    chunk_size = 10
+    id_chunks = [track_ids[i:i + chunk_size] for i in range(0, len(track_ids), chunk_size)]
 
-                # Segments info
-                'segments_count': track_info['features']['segments']['count'],
-                'segments_avg_duration': track_info['features']['segments']['average_duration'],
+    for i, chunk in enumerate(id_chunks):
+        print(f"--- チャンク {i+1}/{len(id_chunks)} ({len(chunk)}曲) の処理を開始... ---")
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            future_to_track_id = {executor.submit(get_soundstat_track_info, track_id): track_id for track_id in chunk}
+            for future in as_completed(future_to_track_id):
+                track_id = future_to_track_id[future]
+                try:
+                    track_info = future.result()
+                    if track_info:
+                        features = {
+                        'id': track_info['id'],
+                        'name': track_info['name'],
+                        'artists': track_info['artists'],
+                        # 'genre': track_info['genre'],
+                        'popularity': track_info['popularity'],
+                        'duration_ms': track_info['duration_ms'],
 
-                # Beats info
-                'beats_count': track_info['features']['beats']['count'],
-                'beats_regularity': track_info['features']['beats']['regularity'],
-            }
-            features_list.append(features)
-            time.sleep(0.1)  # API制限対策
-        except Exception as e:
-            print(f"エラーが発生しました: {e}")
-            fail_list.append(track_id)
-            continue
-    
+                        # Audio features
+                        'tempo': track_info['features']['tempo'],
+                        'key': track_info['features']['key'],
+                        # 'mode': track_info['features']['mode'],
+                        'key_confidence': track_info['features']['key_confidence'],
+                        'energy': track_info['features']['energy'],
+                        'danceability': track_info['features']['danceability'],
+                        'valence': track_info['features']['valence'],
+                        'instrumentalness': track_info['features']['instrumentalness'],
+                        'acousticness': track_info['features']['acousticness'],
+                        'loudness': track_info['features']['loudness'],
+
+                        # Segments info
+                        'segments_count': track_info['features']['segments']['count'],
+                        'segments_avg_duration': track_info['features']['segments']['average_duration'],
+
+                        # Beats info
+                        'beats_count': track_info['features']['beats']['count'],
+                        'beats_regularity': track_info['features']['beats']['regularity'],
+                        }
+                        features_list.append(features)
+                    else:
+                        fail_list.append(track_id)
+                        print(f"track_id: {track_id} の情報が取得できませんでした。")
+                except Exception as e:
+                    print(f"エラーが発生しました: {e}")
+                    fail_list.append(track_id)
+        time.sleep(1)  # チャンク間でAPI負荷軽減
+
     if not features_list:
         print("有効な特徴量を取得できませんでした。")
         return pd.DataFrame()
-    
-    # DataFrameに変換
+
     df = pd.DataFrame(features_list)
-    
-    # 欠損値補完（normalize_and_encode_dataframe関数内で実行）
-    # df = df.dropna()  # この行を削除
-    
     if df.empty:
         print("有効な特徴量を取得できませんでした。")
         return pd.DataFrame()
-    
-    # 正規化とエンコード（欠損値補完も含む）
+
+    # 欠損値補完・正規化・エンコード
     df = normalize_and_encode_dataframe(df)
-    
+
     print(f"前処理完了: {len(df)} 曲の特徴量を処理しました。")
     print(f"失敗したトラックID: {fail_list}")
     print(f"失敗したトラックの数: {len(fail_list)}")
-    
+
     return df
 
 if __name__ == "__main__":
@@ -383,7 +357,7 @@ if __name__ == "__main__":
     # ヘッダー並び替え
     df = pd.read_csv("data/processed_music_data.csv")
     df = df[['担当者', 'アーティスト', '曲名（optional）', 'URL', 'id', 'name', 'artists', 'genre', 'popularity', 'duration_ms', 'tempo', 'key', 'mode', 'key_confidence', 'energy', 'danceability', 'valence', 'instrumentalness', 'acousticness', 'loudness', 'segments_count', 'segments_avg_duration', 'beats_count', 'beats_regularity', 'Happy/Excited', 'Angry/Frustrated', 'Tired/Sad', 'Relax/Chill', 'ジャンル']]
-    df.to_csv("data/processed_music_data.csv", index=False)
+    df.to_csv("data/processed_music_data.csv", index=False) 
 
     
     print("\n--- データ正規化とOne-Hotエンコードを開始します ---")
