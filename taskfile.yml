@@ -44,6 +44,11 @@ tasks:
     cmds:
       - uvicorn get_save_accesstoken:app --host 0.0.0.0 --port 8002 --reload
 
+  run-spotify-test:
+    dir: ./spotify_test
+    cmds:
+      - uvicorn post_playlst_tracks:app --host 0.0.0.0 --port 8003 --reload
+
   
 
   install-dev-tools:

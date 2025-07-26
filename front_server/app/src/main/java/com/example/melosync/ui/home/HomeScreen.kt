@@ -23,12 +23,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.melosync.R
 import com.example.melosync.data.Emotion
+import com.example.melosync.ui.auth.AuthViewModel
+import com.example.melosync.ui.auth.LogoutButton
+import com.example.melosync.ui.spotify.SpotifyViewModel
 
 @Composable
 fun HomeScreen(
-    // When an emotion is selected, navigate to the next screen with that information.
-    onNavigateToMain: (Emotion) -> Unit,
-    viewModel: HomeViewModel = viewModel()
+    // 感情が選択されたら、その情報を元に次の画面へ遷移する
+    onNavigateToMain: (Emotion) -> Unit={},
+    viewModel: HomeViewModel = viewModel() ,
+    authViewModel: AuthViewModel,
+    spotifyViewModel: SpotifyViewModel
 ) {
     Scaffold { paddingValues ->
         Column(
@@ -47,21 +52,22 @@ fun HomeScreen(
             )
             Spacer(modifier = Modifier.height(32.dp))
             Text(
-                text = "今の気分は？", // How are you feeling right now?
+                text = "今の気分は？",
                 style = MaterialTheme.typography.headlineMedium
             )
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Arrange emotion icons horizontally
+            // 感情アイコンを横に並べる
             Row(
                 horizontalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                // Loop through each emotion icon and display it
+                // 各感情アイコンをループで表示
                 Emotion.entries.forEach { emotion ->
                     Button(
                         onClick = {
                             // Update ViewModel and navigate when icon is clicked
                             viewModel.onEmotionSelected(emotion)
+                            spotifyViewModel.loadPlaylists()
                             onNavigateToMain(emotion)
                         },
                         modifier = Modifier.size(80.dp), // Button size
