@@ -34,6 +34,12 @@ tasks:
     cmds:
       - uvicorn return_jwt:app --reload --host 0.0.0.0 --port 8000
 
+  run-auth-server:
+    dir: ./auth_server
+    cmds:
+      - uvicorn auth_api:app --reload --host 0.0.0.0 --port 8000
+
+
   run-spotify-auth:
     dir: ./auth_server
     cmds:
@@ -43,6 +49,11 @@ tasks:
     dir: ./auth_server
     cmds:
       - uvicorn get_save_accesstoken:app --host 0.0.0.0 --port 8002 --reload
+
+  run-spotify-api:
+    dir: ./spotify_test
+    cmds:
+      - uvicorn post_playlist_and_tracks:app --host 0.0.0.0 --port 8000 --reload
 
   
 
