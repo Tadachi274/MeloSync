@@ -1,4 +1,0 @@
-pandas
-spotipy
-scikit-learn
-tensorflow
