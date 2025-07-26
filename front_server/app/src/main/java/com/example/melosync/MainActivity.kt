@@ -16,6 +16,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import com.example.melosync.navigation.AppNavigation
 import com.example.melosync.ui.theme.AppBackground
+//import com.example.melosync.ui.setting.MainScreen
+
 
 //import com.example.melosync.ui.theme.SpotifyEmotionAppTheme
 
@@ -34,13 +36,14 @@ class MainActivity : ComponentActivity() {
                     ) {
                         // ナビゲーションを開始
                         AppNavigation()
-                    }
+//                        MainScreen()
+//                    }
 //                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
 //                    Greeting(
 //                        name = "Android",
 //                        modifier = Modifier.padding(innerPadding)
 //                    )
-//                }
+                }
                 }
             }
         }
