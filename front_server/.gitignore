@@ -14,3 +14,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+/auth_server/.env
+/auth_server/.DS_Store
+/auth_server/test_oauth.py
