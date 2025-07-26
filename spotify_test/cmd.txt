@@ -22,8 +22,6 @@ export JWT=$(curl -s -X POST http://localhost:8000/auth/google-login \
 export JWT='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZXhhbXBsZV91c2VyX2lkIiwiZXhwIjoxNzUyNTc3MTI0fQ.YdSjFztuDw_1Sy-ydx_bFAHaCN_JDa-HmZ3fTNw5vrQ'
 export CODE='AQAiLwXqE2SRAlT8ny077HhufN0x1k9P5APScSU_yXLRbWSlLKvTkyYd2MoIor6uaFpTxMmhyn73o33UQApaMP1ytCVjPalRxjmwIC8X3jt0ec18mHr8nupAp1-7GW1FdFLW57msmlvwaErZ4yZ7L_3cwMYxE5E4qd9XrnrsorUwmsaN40lSBh5I-hinDoE0u4pOrz3T2_soNFXS75ElNDLal4mU3635KnahONULB8UK1DIJd-0L99NS'
 
-&state=random_state_string
-&state=random_state_string
 echo "New JWT: $JWT"
 
 ＃Code取得

@@ -40,9 +40,17 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Spotify authentication callback -->
+<!--            <intent-filter>-->
+<!--                <action android:name="android.intent.action.VIEW" />-->
+<!--                <category android:name="android.intent.category.DEFAULT" />-->
+<!--                <category android:name="android.intent.category.BROWSABLE" />-->
+<!--                <data-->
+<!--                    android:host="callback"-->
+<!--                    android:scheme="com.example.melosync" />-->
+<!--            </intent-filter>-->
         </activity>
-
-        <activity
+        <!--activity
             android:name="com.spotify.sdk.android.auth.LoginActivity"
             android:exported="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
@@ -51,6 +59,20 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="com.example.melosync"
+                    android:host="callback" />
+            </intent-filter>
+        </activity-->
+        <activity
+            android:name=".ui.auth.spotify.SpotifyAuthCallbackActivity"
+            android:exported="true"
+            android:theme="@style/Theme.MeloSync">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
                 <data
                     android:scheme="com.example.melosync"
                     android:host="callback" />
@@ -58,5 +80,11 @@
         </activity>
 
     </application>
+    <queries>
+        <intent>
+            <action android:name="android.credentials.GET_CREDENTIAL"/>
+        </intent>
+        <package android:name="com.google.android.gms"/>
+    </queries>
 
 </manifest>

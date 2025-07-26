@@ -3,6 +3,7 @@ package com.example.melosync
 // Android Framework
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 
@@ -10,6 +11,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -26,12 +28,16 @@ import androidx.core.content.ContextCompat
 // App-specific packages
 import com.example.melosync.navigation.AppNavigation
 import com.example.melosync.ui.theme.AppBackground
+import androidx.activity.viewModels
+import com.example.melosync.ui.auth.AuthViewModel
 import com.example.melosync.ui.theme.MeloSyncTheme
 
 // Coroutines
 import kotlinx.coroutines.*
 
 class MainActivity : ComponentActivity() {
+    private val authViewModel: AuthViewModel by viewModels()
+
     private val apiService = ApiClient.apiService
     private lateinit var phoneHeartRateReceiver: PhoneHeartRateReceiver
     private var logMessage by mutableStateOf("尚未傳送")
@@ -54,18 +60,43 @@ class MainActivity : ComponentActivity() {
                         color = MaterialTheme.colorScheme.background
                     ) {
                         // ナビゲーションを開始
-                        AppNavigation()
-//                        MainScreen()
-//                    }
+                        Log.d("MainActivity","open")
+                        AppNavigation(authViewModel)
+
+                    }
 //                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
 //                    Greeting(
 //                        name = "Android",
 //                        modifier = Modifier.padding(innerPadding)
 //                    )
                 }
+            }
+        }
+    }
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        Log.d("MainActivity","onNewIntent")
+        enableEdgeToEdge()
+        setContent {
+            MeloSyncTheme {
+                AppBackground {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        // ナビゲーションを開始
+                        Log.d("MainActivity","new open")
+                        AppNavigation(authViewModel)
+
+                    }
+//                    )
+//                }
                 }
             }
         }
+        setIntent(intent) // 新しいIntentで上書きする（省略すると getIntent() が古いままになる）
+
+        //handleIntent(intent)
     }
     companion object {
         private const val REQUEST_CODE_BLUETOOTH = 1001
