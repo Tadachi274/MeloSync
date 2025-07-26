@@ -9,6 +9,9 @@ import androidx.navigation.navArgument
 import com.example.melosync.data.Emotion
 import com.example.melosync.ui.home.HomeScreen
 import com.example.melosync.ui.main.MainScreen
+import com.example.melosync.ui.setting.SettingScreen
+import com.example.melosync.ui.spotify.SpotifyViewModel // SpotifyViewModelをインポート
+import androidx.lifecycle.viewmodel.compose.viewModel // ViewModelをインポート
 
 // 画面遷移のルートを定義
 object Routes {
@@ -21,10 +24,12 @@ object Routes {
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+    val spotifyViewModel: SpotifyViewModel = viewModel()
 
     NavHost(
         navController = navController,
         startDestination = Routes.HOME
+
     ) {
         // ホーム画面
         composable(Routes.HOME) {
@@ -32,7 +37,8 @@ fun AppNavigation() {
                 onNavigateToMain = { emotion ->
                     // Main画面へ遷移。感情のenum名を渡す
                     navController.navigate("main/${emotion.name}")
-                }
+                },
+                spotifyViewModel = spotifyViewModel,
             )
         }
 
@@ -47,14 +53,29 @@ fun AppNavigation() {
 
             MainScreen(
                 emotion = emotion,
+                spotifyViewModel = spotifyViewModel,
                 onNavigateToSettings = {
                     // TODO: 設定画面への遷移を実装
-                    // navController.navigate(Routes.SETTINGS)
+                     navController.navigate(Routes.SETTINGS)
+                },
+                onNavigateToHome = {
+                    navController.navigate(Routes.HOME)
                 }
             )
         }
 
         // TODO: 設定画面のComposableをここに追加
-        // composable(Routes.SETTINGS) { ... }
+        composable(Routes.SETTINGS) {
+            SettingScreen(
+                onConfirm = {
+                    navController.navigate("main/${Emotion.HAPPY.name}")
+                },
+                spotifyViewModel = spotifyViewModel,
+                onDismissRequest = {
+                    // TODO: 設定画面への遷移を実装
+                    navController.navigate(Routes.SETTINGS)
+                }
+            )
+        }
     }
 }
