@@ -17,14 +17,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.melosync.data.Emotion
+import com.example.melosync.ui.spotify.SpotifyViewModel
 
 
 @Composable
 fun HomeScreen(
     // 感情が選択されたら、その情報を元に次の画面へ遷移する
     onNavigateToMain: (Emotion) -> Unit,
+    spotifyViewModel: SpotifyViewModel,
     viewModel: HomeViewModel = viewModel()
 ) {
     Scaffold { paddingValues ->
@@ -53,6 +56,7 @@ fun HomeScreen(
                         modifier = Modifier.clickable {
                             // アイコンクリックでViewModelを更新し、画面遷移を実行
                             viewModel.onEmotionSelected(emotion)
+                            spotifyViewModel.loadPlaylists()
                             onNavigateToMain(emotion)
                         }
                     )
