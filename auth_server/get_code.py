@@ -22,7 +22,7 @@ def login():
     return RedirectResponse(auth_url)
 
 # Spotify からリダイレクトされてくるエンドポイント
-@app.get("/callback")
+@app.get("/api/spotify/callback")
 async def callback(request: Request):
     error = request.query_params.get("error")
     if error:

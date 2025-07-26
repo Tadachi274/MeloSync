@@ -349,7 +349,7 @@ class SpotifyViewModel : ViewModel() {
         // viewModelScopeでコルーチンを開始
         viewModelScope.launch {
             // TODO: ここで実際にバックエンドAPIを呼び出す
-//            fetchPlaylistList()
+            //fetchPlaylistList()
             // 今回はダミーデータを表示
             _playlists.value = dummyPlaylists
 
