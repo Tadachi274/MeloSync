@@ -15,10 +15,8 @@ app = FastAPI()
 
 # --- Env ---
 JWT_SECRET_KEY    = os.getenv("JWT_SECRET_KEY")
-print("DEBUG JWT_SECRET_KEY", JWT_SECRET_KEY)
 ALGORITHM         = "HS256"
 raw_FERNET_KEY = os.getenv("FERNET_KEY")
-print("DEBUG FERNET_KEY", raw_FERNET_KEY)
 FERNET_KEY        = os.getenv("FERNET_KEY").encode('utf-8')
 
 SPOTIFY_CLIENT_ID     = os.getenv("SPOTIFY_CLIENT_ID")
@@ -26,13 +24,16 @@ SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 SPOTIFY_REDIRECT_URI  = os.getenv("SPOTIFY_REDIRECT_URI")
 SCOPE = "playlist-modify-public playlist-read-private"
 
-print("DEBUG SPOTIFY_CLIENT_ID    =", SPOTIFY_CLIENT_ID)
 DB_HOST     = os.getenv("DB_HOST")
 DB_PORT     = 5433
 DB_NAME     = os.getenv("DB_NAME")
 DB_USER     = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 
+
+print("DEBUG JWT_SECRET_KEY", JWT_SECRET_KEY)
+print("DEBUG FERNET_KEY", raw_FERNET_KEY)
+print("DEBUG SPOTIFY_CLIENT_ID    =", SPOTIFY_CLIENT_ID)
 
 # --- JWT から user_id を取り出す Dependency ---
 def get_current_user(authorization: str = Header(..., alias="Authorization")) -> str:
@@ -165,6 +166,8 @@ def get_specific_playlist_tracks(
     return track_info_list
 
 # --- API エンドポイント ---
+
+#感情を元にプレイリストのトラックを取得
 @app.post("/api/spotify/emotion-playlist-tracks")
 async def emotion_playlist_tracks(
     user_id: str = Depends(get_current_user),
@@ -200,7 +203,8 @@ async def emotion_playlist_tracks(
         raise HTTPException(status_code=500, detail=str(e))
     
 
-@app.post("/api/spotify/user-playlists")
+# ユーザーのプレイリスト一覧を取得
+@app.post("/api/playlists")
 async def user_playlists(
     user_id: str = Depends(get_current_user)
 ):
