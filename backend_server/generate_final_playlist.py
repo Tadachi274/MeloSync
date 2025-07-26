@@ -6,6 +6,7 @@ import os
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from dotenv import load_dotenv
+from typing import List, Tuple, Optional
 
 # --- 重要なステップ：プログラムの最初に.envファイルを読み込む ---
 load_dotenv()
@@ -15,53 +16,63 @@ from spotify_utils import get_playlist_tracks
 from recommend import recommend_songs_for_target
 from pre_process_normalize import process_tracks_directly
 
-# --- ユーザー設定 ---
-# ここにあなたのSpotifyプレイリストのURLを入力してください
-PLAYLIST_URL = 'https://open.spotify.com/playlist/6rEdUNfBu6BiWgp0PNXIO4?si=1611984fbf574d02' 
-user_start_mood_name = 'Tired/Sad'
-user_target_mood_name ='Happy/Excited'
-
-# --- メイン実行関数 ---
-def main():
-    if 'ここに分析したいSpotifyプレイリストのURLをペースト' in PLAYLIST_URL or 'googleusercontent.com' in PLAYLIST_URL:
-        print("エラー: スクリプトを編集して、PLAYLIST_URLを実際のSpotifyプレイリストのURLに更新してください。")
-        return
+def recommend_playlist(
+    playlist_url: str,
+    user_start_mood_name: str,
+    user_target_mood_name: str,
+    top_k: int = 10000
+) -> Optional[List[Tuple[str, float]]]:
+    """
+    プレイリストから推薦楽曲を生成する関数
+    
+    Args:
+        playlist_url: SpotifyプレイリストのURL
+        user_start_mood_name: 現在の気分（'Angry/Frustrated', 'Happy/Excited', 'Relax/Chill', 'Tired/Sad'）
+        user_target_mood_name: 目標の気分
+        top_k: 推薦する楽曲の最大数
+        
+    Returns:
+        List[Tuple[str, float]]: トラックIDと移行確率のペアのリスト
+        None: エラーが発生した場合
+    """
+    if 'ここに分析したいSpotifyプレイリストのURLをペースト' in playlist_url or 'googleusercontent.com' in playlist_url:
+        print("エラー: 有効なSpotifyプレイリストのURLを指定してください。")
+        return None
 
     try:
-        # 1. 【追加】ここで認証トークンを取得
+        # 1. Spotifyアクセストークンを取得
         print("情報: Spotifyアクセストークンを取得中...")
         client_id = os.getenv("SPOTIFY_CLIENT_ID")
         client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
 
         if not client_id or not client_secret:
             print("エラー: .envファイルまたは環境変数からSPOTIPY_CLIENT_IDとSPOTIPY_CLIENT_SECRETを読み込めませんでした。")
-            return
+            return None
             
         auth_manager = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
         access_token = auth_manager.get_access_token(as_dict=False)
         print("情報: トークンの取得に成功しました。")
 
         # 2. プレイリストのトラックIDを取得
-        playlist_id = PLAYLIST_URL.split('/')[-1].split('?')[0]
+        playlist_id = playlist_url.split('/')[-1].split('?')[0]
         print(f"情報: プレイリスト '{playlist_id}' からトラックを取得中...")
         
-        # 【修正】取得したaccess_tokenを2番目の引数として渡す
         playlist_items = get_playlist_tracks(playlist_id, access_token)
         
         track_ids = [item['track']['id'] for item in playlist_items if item.get('track') and item['track'].get('id')]
         
         if not track_ids:
-            print(f"エラー: プレイリスト {PLAYLIST_URL} からトラックを取得できませんでした。")
-            return
+            print(f"エラー: プレイリスト {playlist_url} からトラックを取得できませんでした。")
+            return None
         print(f"情報: {len(track_ids)} 曲のトラックを正常に取得しました。")
             
-        # 3. 【修正】pre_process_normalize.pyの関数を使用
+        # 3. pre_process_normalize.pyの関数を使用
         print("情報: SoundStatから特徴を取得し、pre_process_normalize.pyの方法で前処理を行っています...")
         processed_df = process_tracks_directly(track_ids)
 
         if processed_df.empty:
             print("エラー: 楽曲の特徴を処理できませんでした。")
-            return
+            return None
 
         # id列を保存してから削除（モデル入力には不要）
         playlist_track_ids = processed_df['id'].values
@@ -78,25 +89,42 @@ def main():
         print("情報: 推薦リストを生成中...")
         recommended_playlist = recommend_songs_for_target(
             model=model, X=X_playlist, track_ids=playlist_track_ids,
-            target_mood_code=target_mood_code, top_k=100
+            target_mood_code=target_mood_code, top_k=top_k
         )
-        print(X_playlist)
         
-        # 5. 結果を表示
-        print("\n" + "="*50)
-        print(f"「{user_start_mood_name}」から「{user_target_mood_name}」への推薦リスト")
-        print("="*50)
-        if recommended_playlist:
-            for i, (track_id, probability) in enumerate(recommended_playlist):
-                print(f"{i+1:2d}. トラックID: {track_id:<25} | 移行確率: {probability:.2%}")
-        else:
-            print("推薦できる楽曲が見つかりませんでした。")
+        return recommended_playlist
 
     except FileNotFoundError as e:
         print(f"\nモデルファイルが見つかりません: {e}")
         print("モデルトレーニングスクリプトを実行し、生成された.joblibファイルがこのスクリプトと同じディレクトリにあることを確認してください。")
+        return None
     except Exception as e:
         print(f"\nプログラム実行中にエラーが発生しました: {e}")
+        return None
+
+# --- ユーザー設定 ---
+# ここにあなたのSpotifyプレイリストのURLを入力してください
+PLAYLIST_URL = 'https://open.spotify.com/playlist/6rEdUNfBu6BiWgp0PNXIO4?si=1611984fbf574d02' 
+user_start_mood_name = 'Tired/Sad'
+user_target_mood_name ='Happy/Excited'
+
+# --- メイン実行関数 ---
+def main():
+    recommended_playlist = recommend_playlist(
+        playlist_url=PLAYLIST_URL,
+        user_start_mood_name=user_start_mood_name,
+        user_target_mood_name=user_target_mood_name
+    )
+    
+    if recommended_playlist:
+        # 結果を表示
+        print("\n" + "="*50)
+        print(f"「{user_start_mood_name}」から「{user_target_mood_name}」への推薦リスト")
+        print("="*50)
+        for i, (track_id, probability) in enumerate(recommended_playlist):
+            print(f"{i+1:2d}. トラックID: {track_id:<25} | 移行確率: {probability:.2%}")
+    else:
+        print("推薦できる楽曲が見つかりませんでした。")
 
 if __name__ == "__main__":
     main()
