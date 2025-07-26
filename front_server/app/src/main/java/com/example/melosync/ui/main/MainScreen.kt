@@ -75,6 +75,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.Divider
 import androidx.compose.foundation.layout.navigationBarsPadding
+import com.example.melosync.ui.auth.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class) // TopAppBar用に追記
 @Composable
@@ -83,7 +84,8 @@ fun MainScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToHome: () -> Unit,
     mainviewModel: MainViewModel = viewModel() ,
-    spotifyViewModel: SpotifyViewModel
+    spotifyViewModel: SpotifyViewModel,
+    authViewModel : AuthViewModel,
 ) {
     // ViewModelに選択された感情をセット
     LaunchedEffect(key1 = emotion) {
@@ -181,9 +183,9 @@ fun MainScreen(
                                 }
                             )
                             DropdownMenuItem(
-                                text = {Text("再生")},
+                                text = {Text("ログアウト")},
                                 onClick = {
-                                    spotifyViewModel.play("spotify:track:7v6DqVMaljJDUXYavMY4kf")
+                                    authViewModel.logout()
                                 }
                             )
                         }
