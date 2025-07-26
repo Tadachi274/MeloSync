@@ -226,13 +226,23 @@ def normalize_and_encode_dataframe(df):
         print("入力DataFrameが空です。")
         return df
 
-    # 数値データとカテゴリデータの識別
+    # 欠損値を平均値で補完
     numerical_features = [
         'popularity', 'duration_ms', 'tempo', 'key_confidence', 'energy',
         'danceability', 'valence', 'instrumentalness', 'acousticness',
         'loudness', 'segments_count', 'segments_avg_duration',
         'beats_count', 'beats_regularity'
     ]
+    
+    # 数値特徴量の欠損値を平均値で補完
+    for col in numerical_features:
+        if col in df.columns:
+            if df[col].isnull().any():
+                mean_value = df[col].mean()
+                df[col] = df[col].fillna(mean_value)
+                print(f"列 '{col}' の欠損値を平均値 {mean_value:.4f} で補完しました。")
+    
+    # カテゴリ特徴量の欠損値を最頻値で補完
     categorical_features = ['key']  # modeとgenreを除外
 
     # DataFrameに実際に存在する列のみを対象とする
@@ -344,14 +354,14 @@ def process_tracks_directly(track_ids: list) -> pd.DataFrame:
     # DataFrameに変換
     df = pd.DataFrame(features_list)
     
-    # 欠損値除去
-    df = df.dropna()
+    # 欠損値補完（normalize_and_encode_dataframe関数内で実行）
+    # df = df.dropna()  # この行を削除
     
     if df.empty:
-        print("欠損値除去後、有効なデータが残りませんでした。")
+        print("有効な特徴量を取得できませんでした。")
         return pd.DataFrame()
     
-    # 正規化とエンコード
+    # 正規化とエンコード（欠損値補完も含む）
     df = normalize_and_encode_dataframe(df)
     
     print(f"前処理完了: {len(df)} 曲の特徴量を処理しました。")
