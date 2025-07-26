@@ -14,7 +14,7 @@ def obtain_jwt():
     """
     id_token = os.getenv("GOOGLE_ID_TOKEN") or input("Enter your Google ID token: ")
     resp = requests.post(
-        f"{JWT_BASE}/auth/google-login",
+        f"{JWT_BASE}/api/auth/google-login",
         json={"id_token": id_token}
     )
     resp.raise_for_status()
@@ -24,7 +24,7 @@ def obtain_spotify_code():
     """
     /login を開いて Spotify 認可 → ブラウザに出る JSON から code をコピーして貼り付け
     """
-    login_url = f"{SPOTIFY_BASE}/login"
+    login_url = f"{SPOTIFY_BASE}/api/spotify/login"
     print("Opening Spotify login page in your browser...")
     webbrowser.open(login_url)
     print("After you authorize, your browser will show JSON including “authorization_code”.")
