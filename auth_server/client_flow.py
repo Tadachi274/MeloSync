@@ -6,7 +6,7 @@ import webbrowser
 # 環境変数かデフォルトで API サーバーのベース URL を設定
 JWT_BASE = os.getenv("JWT_BASE_URL", "http://0.0.0.0:8000")
 SPOTIFY_BASE = os.getenv("SPOTIFY_BASE_URL", "http://0.0.0.0:8001")
-API_BASE = os.getenv("API_BASE_URL", "http://0.0.0.0:8002")
+API_BASE = os.getenv("API_BASE_URL", "http://0.0.0.0:8000")
 
 def obtain_jwt():
     """
