@@ -84,6 +84,21 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+    private fun postHeartRate(hr: Int) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val response = apiService.sendHeartRate(HeartRate(hr))
+                if (response.isSuccessful) {
+                    val responseBody = response.body()
+                    Log.d("MainActivity", "Status: ${responseBody?.status}, HeartRate: ${responseBody?.data?.heartrate}")
+                } else {
+                    Log.e("MainActivity", "Error: ${response.errorBody()?.string()}")
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "例外錯誤: ${e.message}")
+            }
+        }
+    }
 }
 
 @Composable
