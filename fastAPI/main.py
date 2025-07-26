@@ -33,14 +33,14 @@ def analyze_emotion_via_openai(heart_rate, positive):
 
     prompt = f"""
     現在、ユーザの心拍の時系列は {heart_rate} でした。
-    ユーザが選んだ気持ちは{positive}でした。
-    以上の状態により、ユーザは今、Happy/Excited (1), Angry/Frustrated (2), Tired/Sad (3), Relax/Chill (4)、四つの感情の中で、どの感情ですか？
+    ユーザが選んだ気分は{positive}でした。
+    心拍の時系列と気分により、ユーザは今、Happy/Excited (positive, 心拍数が高い), Angry/Frustrated (negative, 心拍数が高い), Tired/Sad (negative, 心拍数が低い), Relax/Chill (positive, 心拍数が低い)、四つの感情の中で、どの感情ですか？
     """
 
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "あなたは感情推定の専門家です。ユーザの心拍データと気持ちにより、Happy/Excited (=1), Angry/Frustrated (=2), Tired/Sad (=3), Relax/Chill (=4)から一つの感情を返信してください。フォーマット：1, 2, 3, 4"},
+            {"role": "system", "content": "あなたは感情推定の専門家です。ユーザの心拍データと気分により、Happy/Excited (=1), Angry/Frustrated (=2), Tired/Sad (=3), Relax/Chill (=4)から一つの感情を返信してください。フォーマット：1, 2, 3, 4"},
             {"role": "user", "content": prompt}
         ],
         max_tokens=150,
