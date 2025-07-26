@@ -277,12 +277,12 @@ def process_tracks_directly(track_ids: list) -> pd.DataFrame:
     features_list = []
     fail_list = []
 
-    chunk_size = 10
+    chunk_size = 30
     id_chunks = [track_ids[i:i + chunk_size] for i in range(0, len(track_ids), chunk_size)]
 
     for i, chunk in enumerate(id_chunks):
         print(f"--- チャンク {i+1}/{len(id_chunks)} ({len(chunk)}曲) の処理を開始... ---")
-        with ThreadPoolExecutor(max_workers=10) as executor:
+        with ThreadPoolExecutor(max_workers=chunk_size) as executor:
             future_to_track_id = {executor.submit(get_soundstat_track_info, track_id): track_id for track_id in chunk}
             for future in as_completed(future_to_track_id):
                 track_id = future_to_track_id[future]
