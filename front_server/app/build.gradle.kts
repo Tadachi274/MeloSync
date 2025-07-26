@@ -16,7 +16,7 @@ android {
         versionName = "1.0"
 
         manifestPlaceholders["redirectSchemeName"] = "com.example.melosync"
-        manifestPlaceholders["redirectHostName"] = "auth"
+        manifestPlaceholders["redirectHostName"] = "callback"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -62,10 +62,14 @@ dependencies {
     implementation(libs.spotify.auth)
     // Spotify 再生コントロールライブラリ
 //    implementation(libs.spotify.app.remote)
+    implementation(files("libs/spotify-app-remote-release-0.8.0.aar"))
+    implementation(libs.gson) // Spotify SDKが必要とするGson
     // Retrofit (Web API通信用)
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)
-    // テストライブラリ
+    implementation("io.coil-kt:coil-compose:2.6.0")
+//    implementation("io.coil-kt.coil3:coil-compose:3.3.0")
+//     テストライブラリ
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

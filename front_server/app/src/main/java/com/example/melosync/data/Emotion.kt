@@ -1,11 +1,3 @@
-//package com.example.melosync.data
-//
-//enum class Emotion(val emoji: String) {
-//    SAD("😢"),
-//    NEUTRAL("😐"),
-//    HAPPY("😄")
-//}
-
 package com.example.melosync.data
 
 import androidx.annotation.DrawableRes
@@ -18,4 +10,15 @@ enum class Emotion(
     SAD(emoji = "😢", drawableId = R.drawable.sad), // Replace with your actual drawable
     NEUTRAL(emoji = "😐", drawableId = R.drawable.neutral), // Replace with your actual drawable
     HAPPY(emoji = "😄", drawableId = R.drawable.happy) // Replace with your actual drawable
+}
+
+enum class SendEmotion(val id: Int){
+    HAPPY(1),
+    ANGRY(2),
+    SAD(3),
+    RELAX(4)
+}
+
+class MusicData {
+
 }
