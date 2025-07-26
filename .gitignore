@@ -2,4 +2,3 @@ spotify_test/.env
 .DS_Store
 .cache
 auth_server/.env
-.DS_Store
