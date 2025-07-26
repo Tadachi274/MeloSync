@@ -29,7 +29,7 @@ class MainViewModel : ViewModel() {
     val firstEmotionCoordinate = _firstEmotionCoordinate.asStateFlow()
 
 
-    // 現在の象限を保持する (1, 2, 3, 4 もしくは 0)
+    // 現在の象限を保持する (1, 2, 3, 4)
     private val _currentEmotion = MutableStateFlow(SendEmotion.HAPPY)
     val currentEmotion : StateFlow<SendEmotion> = _currentEmotion.asStateFlow()
     private val _firstEmotion = MutableStateFlow(SendEmotion.HAPPY)
