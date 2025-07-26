@@ -63,8 +63,9 @@ def main():
             print("エラー: 楽曲の特徴を処理できませんでした。")
             return
 
+        # id列を保存してから削除（モデル入力には不要）
         playlist_track_ids = processed_df['id'].values
-        X_playlist = processed_df.drop(columns=['id'])
+        X_playlist = processed_df.drop(columns=['id', 'name', 'artists'])
         
         # 4. モデルを読み込んで推薦を生成
         model_filename = f"model/model_{user_start_mood_name.replace('/', '-')}.joblib"

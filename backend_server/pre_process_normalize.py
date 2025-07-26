@@ -305,9 +305,9 @@ def process_tracks_directly(track_ids: list) -> pd.DataFrame:
         try:
             # pre_process_normalize.pyと同じ特徴量抽出（modeとgenreを除外）
             features = {
-                # 'id': track_info['id'],
-                # 'name': track_info['name'],
-                # 'artists': track_info['artists'],
+                'id': track_info['id'],
+                'name': track_info['name'],
+                'artists': track_info['artists'],
                 'popularity': track_info['popularity'],
                 'duration_ms': track_info['duration_ms'],
 
