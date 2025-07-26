@@ -1,5 +1,7 @@
 package com.example.melosync.ui.home
 
+import android.util.Log
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,21 +22,32 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.melosync.R
+import com.example.melosync.ApiClient
 import com.example.melosync.data.Emotion
+import com.example.melosync.data.SendEmotion
+import com.example.melosync.Emotion2
 import com.example.melosync.ui.auth.AuthViewModel
 import com.example.melosync.ui.auth.LogoutButton
 import com.example.melosync.ui.spotify.SpotifyViewModel
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import com.example.melosync.EmotionResponse
+import retrofit2.Response
 
 @Composable
 fun HomeScreen(
     // 感情が選択されたら、その情報を元に次の画面へ遷移する
-    onNavigateToMain: (Emotion) -> Unit={},
+    onNavigateToMain: (SendEmotion) -> Unit={},
     viewModel: HomeViewModel = viewModel() ,
     authViewModel: AuthViewModel,
     spotifyViewModel: SpotifyViewModel
 ) {
+    val apiService = ApiClient.apiService
+    val scope = rememberCoroutineScope()
     Scaffold { paddingValues ->
         Column(
             modifier = Modifier
@@ -64,15 +77,54 @@ fun HomeScreen(
                 // 各感情アイコンをループで表示
                 Emotion.entries.forEach { emotion ->
                     Button(
-                        onClick = {
-                            // Update ViewModel and navigate when icon is clicked
-                            viewModel.onEmotionSelected(emotion)
-                            spotifyViewModel.loadPlaylists()
-                            onNavigateToMain(emotion)
-                        },
                         modifier = Modifier.size(80.dp), // Button size
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer) // Button background color
-                    ) {
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer), // Button background color
+                        onClick = {
+                            scope.launch {
+                                try {
+                                    // 1. APIを呼び出し、レスポンスを取得
+                                    val response = apiService.analyzeEmotion(Emotion2(emotion.name))
+
+                                    // 2. レスポンスが成功し、中身がnullでないことを確認
+                                    if (response.isSuccessful && response.body() != null) {
+                                        val emotionResponse = response.body()!!
+
+                                        // APIから返されたID（文字列）をIntに変換
+                                        val emotionId = emotionResponse.emotion.toIntOrNull()
+
+                                        // IDを使って正しいenum定数を検索
+                                        val analyzedEmotion = SendEmotion.entries.firstOrNull { it.id == emotionId }
+
+                                        // analyzedEmotionがnullでないことを確認
+                                        if (analyzedEmotion != null) {
+                                            // このブロック内では analyzedEmotion は non-null (SendEmotion型) として扱える
+                                            Log.d("TransPage", "Analyzed as: ${analyzedEmotion.name}") // OK
+                                            viewModel.onEmotionSelected(analyzedEmotion) // OK
+                                            spotifyViewModel.loadPlaylists()
+                                            onNavigateToMain(analyzedEmotion) // OK
+                                        } else {
+                                            // APIから返されたIDが不正で、enumが見つからなかった場合の処理
+                                            Log.e("HomeScreen", "Invalid emotion ID from API: ${emotionResponse.emotion}. Falling back.")
+                                            viewModel.onEmotionSelected(SendEmotion.HAPPY)
+                                            spotifyViewModel.loadPlaylists()
+                                            onNavigateToMain(SendEmotion.HAPPY)
+                                        }
+                                    } else {
+                                        // API呼び出しが失敗した場合の処理
+                                        Log.e("HomeScreen", "API Error: ${response.errorBody()?.string()}")
+                                        // エラー時も、クリックした感情で遷移させるなどのフォールバック処理
+                                        viewModel.onEmotionSelected(SendEmotion.HAPPY)
+                                        spotifyViewModel.loadPlaylists()
+                                        onNavigateToMain(SendEmotion.HAPPY)
+                                    }
+                                } catch (e: Exception) {
+                                    // ネットワークエラーなどの例外処理
+                                    Log.e("HomeScreen", "Exception: ${e.message}")
+                                }
+                            }
+
+                        }
+                    ){
                         Box(
                             modifier = Modifier.fillMaxSize(), // Expand Box to fill the entire button
                             contentAlignment = Alignment.Center // Center content within the Box

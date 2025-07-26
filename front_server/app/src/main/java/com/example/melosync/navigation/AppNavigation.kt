@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.melosync.data.SendEmotion
 import com.example.melosync.data.Emotion
 import com.example.melosync.ui.auth.LoginScreen
 import com.example.melosync.ui.home.HomeScreen
@@ -74,7 +75,6 @@ fun AppNavigation(
             MainScreen(
                 emotion = emotion,
                 spotifyViewModel = spotifyViewModel,
-                authViewModel = authViewModel,
                 onNavigateToSettings = {
                     // TODO: 設定画面への遷移を実装
                      navController.navigate(Routes.SETTINGS)
@@ -89,7 +89,7 @@ fun AppNavigation(
         composable(Routes.SETTINGS) {
             SettingScreen(
                 onConfirm = {
-                    navController.navigate("main/${Emotion.HAPPY.name}")
+                    navController.navigate("main/${SendEmotion.HAPPY.name}")
                 },
                 spotifyViewModel = spotifyViewModel,
                 onDismissRequest = {

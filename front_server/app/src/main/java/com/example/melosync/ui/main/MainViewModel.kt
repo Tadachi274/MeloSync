@@ -38,15 +38,28 @@ class MainViewModel : ViewModel() {
     private val _pointColor = MutableStateFlow(Color.Gray)
     val pointColor = _pointColor.asStateFlow()
 
-    fun setEmotion(emotion: Emotion) {
+    fun setEmotion(emotion: SendEmotion) {
         val x = when (emotion) {
-            Emotion.HAPPY -> 0.6f
-            Emotion.NEUTRAL -> 0.2f
-            Emotion.SAD -> -0.6f
+//            Emotion.HAPPY -> 0.6f
+//            Emotion.NEUTRAL -> 0.2f
+//            Emotion.SAD -> -0.6f
+            SendEmotion.HAPPY -> 0.4f
+            SendEmotion.SAD -> -0.4f
+            SendEmotion.ANGRY -> -0.4f
+            SendEmotion.RELAX -> 0.4f
+
         }
         // y座標は-1.0から1.0の間のランダムな値
-        val y = (Random.nextFloat() * 2f - 1f) * 0.7f
+        val y =  when (emotion) {
+//            Emotion.HAPPY -> 0.6f
+//            Emotion.NEUTRAL -> 0.2f
+//            Emotion.SAD -> -0.6f
+            SendEmotion.HAPPY -> 0.4f
+            SendEmotion.SAD -> -0.4f
+            SendEmotion.ANGRY -> 0.4f
+            SendEmotion.RELAX -> -0.4f
 
+        }
         _emotionCoordinate.value = EmotionCoordinate(x, y)
         _firstEmotionCoordinate.value = EmotionCoordinate(x, y)
         updateQuadrant(x, y)

@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.melosync.data.Emotion
+import com.example.melosync.data.SendEmotion
 import com.example.melosync.data.api.TrackAPI
 import com.example.melosync.ui.setting.SettingScreen
 import com.example.melosync.ui.theme.*
@@ -80,7 +80,7 @@ import com.example.melosync.ui.auth.AuthViewModel
 @OptIn(ExperimentalMaterial3Api::class) // TopAppBar用に追記
 @Composable
 fun MainScreen(
-    emotion: Emotion,
+    emotion: SendEmotion,
     onNavigateToSettings: () -> Unit,
     onNavigateToHome: () -> Unit,
     mainviewModel: MainViewModel = viewModel() ,
@@ -313,7 +313,7 @@ fun MainScreen(
 }
 
 @Composable
-fun TopBarWithEmotion(emotion: Emotion, onMenuClick: () -> Unit) {
+fun TopBarWithEmotion(emotion: SendEmotion, onMenuClick: () -> Unit) {
     var offsetX by remember { mutableStateOf(0f) }
     Box(
         modifier = Modifier
@@ -328,7 +328,7 @@ fun TopBarWithEmotion(emotion: Emotion, onMenuClick: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = emotion.emoji,
+                text = emotion.name,
                 fontSize = 40.sp,
                 modifier = Modifier
                     .offset { IntOffset(offsetX.roundToInt(), 0) }
