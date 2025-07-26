@@ -1,4 +1,4 @@
-# generate_final_playlist.py (最終修正版、このファイルのみを編集)
+# generate_final_playlist.py
 
 import pandas as pd
 import joblib
