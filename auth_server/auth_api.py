@@ -1,3 +1,11 @@
+import os
+from datetime import datetime, timedelta, timezone
+
+from fastapi import FastAPI, HTTPException, Header
+from pydantic import BaseModel
+from jose import jwt
+from dotenv import load_dotenv
+import uuid
 import requests
 from fastapi import FastAPI, Request, HTTPException
 from fastapi import Depends, Header
@@ -9,12 +17,14 @@ from jose import jwt, JWTError
 import psycopg2
 from datetime import datetime, timezone
 from pathlib import Path
+import get_save_accesstoken as db_utils
 
-dotenv_path = Path(__file__).parent / ".env"
+# ─── 環境変数読み込み ─────────────────────────────────────
 load_dotenv()
 
-app = FastAPI()
-
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 6
 SPOTIFY_CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 SPOTIFY_REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
@@ -37,33 +47,74 @@ print("DEBUG SPOTIFY_CLIENT_ID    =", SPOTIFY_CLIENT_ID)
 print("DEBUG SPOTIFY_CLIENT_SECRET=", SPOTIFY_CLIENT_SECRET)
 print("DEBUG SPOTIFY_REDIRECT_URI =", SPOTIFY_REDIRECT_URI)
 print("DEBUG JWT", JWT)
+print("DEBUG JWT_SECRET:", SECRET_KEY)
 
-def get_current_user(authorization: str = Header(...)) -> str:
+# ─── FastAPI インスタンス ─────────────────────────────────
+app = FastAPI()
+
+# ─── リクエストボディの定義 ─────────────────────────────────
+class GoogleLoginRequest(BaseModel):
+    id_token: str
+
+
+# ─── JWT 発行関数 ─────────────────────────────────────────
+def create_jwt(user_id: str) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(hours=ACCESS_TOKEN_EXPIRE_MINUTES)
+    payload = {
+        "user_id": user_id,
+        "exp": expire
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+# ─── エンドポイント：Google ログイン → JWT 返却 ────────────────
+@app.post("/api/auth/google-login")
+async def google_login():
+    print("Received Login Request")
+    user_id = str(uuid.uuid4())
+    print("user_id:", user_id)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid Google ID token")
+
+
+    access_token = create_jwt(user_id)
+    print("access_token:", access_token)
+    return {"access_token": access_token}
+
+# ─── JWT 更新エンドポイント ─────────────────────────────────
+@app.post("/api/auth/refresh-token")
+async def refresh_token(authorization: str = Header(...)):
     """
-    Authorization ヘッダーから JWT を取り出し、
-    user_id を検証・返却する Dependency
+    フロント側から渡されたJWTを検証し、期限切れの場合は新しいJWTを返す。
     """
     scheme, _, token = authorization.partition(" ")
     if scheme.lower() != "bearer" or not token:
         raise HTTPException(status_code=401, detail="Authorization header malformed")
 
     try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("user_id")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="user_id not found in token")
-        return user_id
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Token validation failed")
+        exp = payload.get("exp")
 
-@app.get("/api/test/user")
-async def test_user(user_id: str = Depends(get_current_user)):
-    return {"user_id": user_id}
+        if not user_id or not exp:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+
+        # Check if the token has expired
+        if datetime.fromtimestamp(exp, timezone.utc) < datetime.now(timezone.utc):
+            # Issue a new JWT
+            new_token = create_jwt(user_id)
+            return {"access_token": new_token}
+        else:
+            return {"access_token": token}  # Return the same token if not expired
+
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.JWTError:
+        raise HTTPException(status_code=401, detail="Token validation failed")
 
 @app.post("/api/spotify/callback")
 async def spotify_callback(
     request: Request,
-    user_id: str = Depends(get_current_user)
+    user_id: str = Depends(db_utils.get_current_user)
     ):
     """
     Androidアプリから送られてきた認証コードを取得し、アクセストークンに交換する。
@@ -106,13 +157,13 @@ async def spotify_callback(
         print(f"Refresh Token: {refresh_token}")
 
         key = FERNET_KEY
-        encrypted_access = encrypt(key, access_token)
-        encrypted_refresh = encrypt(key, refresh_token)
+        encrypted_access = db_utils.encrypt(key, access_token)
+        encrypted_refresh = db_utils.encrypt(key, refresh_token)
 
-        save_tokens_to_db(user_id, encrypted_access, encrypted_refresh, expires_at)
+        db_utils.save_tokens_to_db(user_id, encrypted_access, encrypted_refresh, expires_at)
 
         # これでバックエンドはユーザーのプレイリストを取得できる
-        playlists = get_user_playlists(access_token)
+        playlists = db_utils.get_user_playlists(access_token)
         print(playlists)
 
         return {"status": "success", "playlists": playlists}
@@ -123,65 +174,3 @@ async def spotify_callback(
         return JSONResponse(status_code=e.status_code, content={"error": e.detail})
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
-
-
-
-def encrypt(key: bytes, data: str):
-    """
-    key: Fernet key as bytes
-    data: plaintext string
-    """
-    fernet = Fernet(key)
-    # data を bytes にして暗号化 → bytes
-    encrypted_pass = fernet.encrypt(data.encode('utf-8'))
-    # DBに保存しやすいように戻り値は文字列に
-    return encrypted_pass.decode('utf-8')
-
-def save_tokens_to_db(user_id: str, access_token: str, refresh_token: str, expires_at: int):
-    """
-    ユーザーのアクセストークンとリフレッシュトークンをデータベースに保存する関数
-    """
-    print(f"Saving tokens for user_id: {user_id}")
-
-    conn = psycopg2.connect(
-        host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
-        user=DB_USER, password=DB_PASSWORD
-    )
-    cur = conn.cursor()
-    
-    cur.execute("""
-        INSERT INTO spotify_tokens (
-            user_id,
-            access_token,
-            refresh_token,
-            expires_at
-        ) VALUES (%s, %s, %s, %s)
-        ON CONFLICT (user_id) DO UPDATE SET
-            access_token  = EXCLUDED.access_token,
-            refresh_token = EXCLUDED.refresh_token,
-            expires_at    = EXCLUDED.expires_at
-    """, (user_id, access_token, refresh_token, expires_at))
-    
-    conn.commit()
-    cur.close()
-    conn.close()
-
-
-def get_user_playlists(access_token: str):
-    """
-    アクセストークンを使ってユーザーのプレイリストを取得する関数
-    """
-    headers = {"Authorization": f"Bearer {access_token}"}
-    response = requests.get("https://api.spotify.com/v1/me/playlists", headers=headers)
-    response.raise_for_status()
-
-    if response.status_code == 200:
-        return response.json()
-    else:
-        raise HTTPException(status_code=response.status_code, detail="Failed to fetch playlists")
-
-
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(app, host="0.0.0.0", port=5001)
