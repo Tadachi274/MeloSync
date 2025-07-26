@@ -95,9 +95,9 @@ def preprocess_music_data(input_csv, output_csv):
     df = df.dropna()
 
     # 文字列カラムのトリム
-    str_cols = df.select_dtypes(include='object').columns
-    for col in str_cols:
-        df[col] = df[col].str.strip()
+    # str_cols = df.select_dtypes(include='object').columns
+    # for col in str_cols:
+    #     df[col] = df[col].str.strip()
 
     # 一旦、全カラムを残す
     features_list = []
@@ -166,11 +166,11 @@ def preprocess_music_data(input_csv, output_csv):
     print(f"失敗したトラックの数: {len(fail_list)}")
 
 if __name__ == "__main__":
-    # preprocess_music_data(
-    #     input_csv="data/melosync_music_data.csv",
-    #     output_csv="data/processed_music_data.csv"
-    # )
-
+    preprocess_music_data(
+        input_csv="data/melosync_music_data.csv",
+        output_csv="data/processed_music_data.csv"
+    )
+    
     # csvファイルのヘッダー並び替えたい
     # 担当者,アーティスト,曲名（optional）,URL,Happy/Excited,Angry/Frustrated,Tired/Sad,Relax/Chill,ジャンル,id,name,artists,genre,popularity,duration_ms,tempo,key,mode,key_confidence,energy,danceability,valence,instrumentalness,acousticness,loudness,segments_count,segments_avg_duration,beats_count,beats_regularity
     # →担当者,アーティスト,曲名（optional）,URL,id,name,artists,genre,popularity,duration_ms,tempo,key,mode,key_confidence,energy,danceability,valence,instrumentalness,acousticness,loudness,segments_count,segments_avg_duration,beats_count,beats_regularity,Happy/Excited,Angry/Frustrated,Tired/Sad,Relax/Chill,ジャンル
@@ -178,24 +178,8 @@ if __name__ == "__main__":
     # ヘッダー並び替え
     df = pd.read_csv("data/processed_music_data.csv")
     df = df[['担当者', 'アーティスト', '曲名（optional）', 'URL', 'id', 'name', 'artists', 'genre', 'popularity', 'duration_ms', 'tempo', 'key', 'mode', 'key_confidence', 'energy', 'danceability', 'valence', 'instrumentalness', 'acousticness', 'loudness', 'segments_count', 'segments_avg_duration', 'beats_count', 'beats_regularity', 'Happy/Excited', 'Angry/Frustrated', 'Tired/Sad', 'Relax/Chill', 'ジャンル']]
-    df.to_csv("data/processed_music_data.csv", index=False)
-
-    df = pd.read_csv("data/processed_music_data.csv")
-    df = df[['genre', 'popularity', 'duration_ms', 'tempo', 'key', 'mode', 'key_confidence', 'energy', 'danceability', 'valence', 'instrumentalness', 'acousticness', 'loudness', 'segments_count', 'segments_avg_duration', 'beats_count', 'beats_regularity', 'Happy/Excited']]
-    df.to_csv("data/processed_music_data_happy.csv", index=False)
-
-    df = pd.read_csv("data/processed_music_data.csv")
-    df = df[['genre', 'popularity', 'duration_ms', 'tempo', 'key', 'mode', 'key_confidence', 'energy', 'danceability', 'valence', 'instrumentalness', 'acousticness', 'loudness', 'segments_count', 'segments_avg_duration', 'beats_count', 'beats_regularity', 'Angry/Frustrated']]
-    df.to_csv("data/processed_music_data_angry.csv", index=False)
-
-    df = pd.read_csv("data/processed_music_data.csv")
-    df = df[['genre', 'popularity', 'duration_ms', 'tempo', 'key', 'mode', 'key_confidence', 'energy', 'danceability', 'valence', 'instrumentalness', 'acousticness', 'loudness', 'segments_count', 'segments_avg_duration', 'beats_count', 'beats_regularity', 'Tired/Sad']]
-    df.to_csv("data/processed_music_data_tired.csv", index=False)
-    df = pd.read_csv("data/processed_music_data.csv")
-
-    df = df[['genre', 'popularity', 'duration_ms', 'tempo', 'key', 'mode', 'key_confidence', 'energy', 'danceability', 'valence', 'instrumentalness', 'acousticness', 'loudness', 'segments_count', 'segments_avg_duration', 'beats_count', 'beats_regularity', 'Relax/Chill']]
-    df.to_csv("data/processed_music_data_relax.csv", index=False)
-
-
+    df.to_csv("data/processed_music_data.csv", index=False) 
+    
+    
     # ４つの感情で実用的なのか。
     # 歌詞考慮しないと限度ある。

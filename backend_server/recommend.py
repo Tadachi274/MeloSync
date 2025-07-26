@@ -9,7 +9,7 @@ def recommend_songs_for_target(model, X, track_ids, target_mood_code, top_k=10):
     # 1. 【修改點】使用 .predict_proba() 來獲取機率
     # 輸出 shape: (樣本數, 類別數)，這裡會是 (樣本數, 4)
     predictions = model.predict_proba(X)
-    
+
     # 2. 全楽曲の中から、指定された「目標感情」への遷移確率のみを抽出する (這部分邏輯不變)
     target_probs = predictions[:, target_mood_code]
     

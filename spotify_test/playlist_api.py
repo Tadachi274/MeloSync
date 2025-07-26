@@ -154,6 +154,3 @@ async def spotify_create_playlist(
     # 3. プレイリスト作成
     new_id = create_or_update_playlist(sp, source_playlist_id, new_playlist_name)
     return {"playlist_url": f"https://open.spotify.com/playlist/{new_id}"}
-
-a,b,c=fetch_user_tokens("somacoro")
-print(a)
