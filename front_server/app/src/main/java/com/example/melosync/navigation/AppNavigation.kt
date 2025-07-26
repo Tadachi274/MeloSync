@@ -57,8 +57,7 @@ fun AppNavigation(
                     // Main画面へ遷移。感情のenum名を渡す
                     navController.navigate("main/${emotion.name}")
                 },
-                authViewModel = authViewModel
-                },
+                authViewModel = authViewModel,
                 spotifyViewModel = spotifyViewModel,
             )
         }
@@ -75,6 +74,7 @@ fun AppNavigation(
             MainScreen(
                 emotion = emotion,
                 spotifyViewModel = spotifyViewModel,
+                authViewModel = authViewModel,
                 onNavigateToSettings = {
                     // TODO: 設定画面への遷移を実装
                      navController.navigate(Routes.SETTINGS)
