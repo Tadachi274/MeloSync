@@ -46,6 +46,7 @@ for emotion, file_path in dataset_files.items():
     df = pd.read_csv(file_path)
     df = df.iloc[:, 7:]
     df = df.drop(columns=['mode_0.0', 'mode_1.0'])
+    df = df.drop(columns=['genre_nan', 'genre_acoustic', 'genre_alt-rock', 'genre_alternative', 'genre_anime', 'genre_dance', 'genre_edm', 'genre_electro', 'genre_electronic', 'genre_garage', 'genre_grunge', 'genre_hip-hop', 'genre_indie', 'genre_indie pop', 'genre_j-dance', 'genre_j-idol', 'genre_j-pop', 'genre_j-rock', 'genre_k-pop', 'genre_mandopop', 'genre_metal', 'genre_pop', 'genre_punk', 'genre_punk-rock', 'genre_r&b', 'genre_reggae', 'genre_rock', 'genre_rockabilly', 'genre_singer-songwriter', 'genre_soul', 'genre_techno', 'genre_trance', 'genre_trip-hop', 'genre_turkish'])
     df = df.drop(columns=['ジャンル'])
     
     # --- 2.2. Valence-Arousal ラベルの作成 ---
@@ -82,11 +83,11 @@ for emotion, file_path in dataset_files.items():
     # --- 2.5. 2つのモデルの学習 ---
     
     # モデルを選択 (ロジスティック回帰、ランダムフォレスト、LightGBMから1つ選んでください)
-    # model_valence = LogisticRegression(random_state=42, max_iter=1000)
-    # model_arousal = LogisticRegression(random_state=42, max_iter=1000)
+    model_valence = LogisticRegression(random_state=42, max_iter=1000)
+    model_arousal = LogisticRegression(random_state=42, max_iter=1000)
     
-    model_valence = RandomForestClassifier(random_state=42)
-    model_arousal = RandomForestClassifier(random_state=42)
+    # model_valence = RandomForestClassifier(random_state=42)
+    # model_arousal = RandomForestClassifier(random_state=42)
     
     # model_valence = lgb.LGBMClassifier(random_state=42)
     # model_arousal = lgb.LGBMClassifier(random_state=42)
