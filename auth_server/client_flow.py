@@ -10,13 +10,9 @@ API_BASE = os.getenv("API_BASE_URL", "http://0.0.0.0:8000")
 
 def obtain_jwt():
     """
-    /auth/google-login に Google の id_token を送信して JWT を取得
+    /auth/google-login にアクセスして JWT を取得
     """
-    id_token = os.getenv("GOOGLE_ID_TOKEN") or input("Enter your Google ID token: ")
-    resp = requests.post(
-        f"{JWT_BASE}/api/auth/google-login",
-        json={"id_token": id_token}
-    )
+    resp = requests.post(f"{JWT_BASE}/api/auth/google-login")
     resp.raise_for_status()
     return resp.json()["access_token"]
 
