@@ -5,6 +5,9 @@ import os
 import time
 from urllib.parse import urlparse
 import json
+from sklearn.preprocessing import MinMaxScaler, OneHotEncoder 
+from sklearn.compose import ColumnTransformer 
+import joblib 
 
 def get_soundstat_track_info(spotify_track_id: str):
     """
@@ -24,12 +27,12 @@ def get_soundstat_track_info(spotify_track_id: str):
 
     # Soundstat APIのエンドポイント
     api_url = f"https://soundstat.info/api/v1/track/{spotify_track_id}"
-
+    
     # リクエストヘッダーにAPIキーを設定
     headers = {
         "X-API-Key": api_key
     }
-
+    
     # クエリパラメータにトラックIDを設定
     params = {
         "id": spotify_track_id
@@ -40,7 +43,7 @@ def get_soundstat_track_info(spotify_track_id: str):
     try:
         # response = requests.get(api_url, headers=headers, params=params)
         response = requests.get(api_url, headers=headers)
-
+        
         # リクエストが成功したかチェック
         response.raise_for_status()  # 200番台以外のステータスコードの場合に例外を発生させる
 
@@ -52,14 +55,14 @@ def get_soundstat_track_info(spotify_track_id: str):
         print(f"レスポンス内容: {response.text}")
     except requests.exceptions.RequestException as req_err:
         print(f"リクエストエラーが発生しました: {req_err}")
-
+    
     return None
 
 # # --- 以下、実行例 ---
 # if __name__ == "__main__":
 #     # 情報を取得したいSpotifyのトラックIDを指定
 #     # 例: 嵐 - 「HAPPINESS」
-#     track_id_to_analyze = "0Ns63lt28epRgED3Tnhmth"
+#     track_id_to_analyze = "0Ns63lt28epRgED3Tnhmth" 
 
 #     # 関数を呼び出して楽曲情報を取得
 #     track_info = get_soundstat_track_info(track_id_to_analyze)
@@ -69,7 +72,7 @@ def get_soundstat_track_info(spotify_track_id: str):
 #         print("\n✅ 楽曲情報の取得に成功しました。")
 #         # 結果をきれいにフォーマットして表示
 #         print(json.dumps(track_info, indent=2, ensure_ascii=False))
-
+    
 
 def extract_track_id_from_url(url):
     try:
@@ -110,12 +113,12 @@ def preprocess_music_data(input_csv, output_csv):
             continue
         track_info = get_soundstat_track_info(track_id)
         print(track_info)
-
+        
         if track_info is None:
             features_list.append({})
             print(f"track_id: {track_id} の情報が取得できませんでした。")
             continue
-
+        
         try:
             # 必要なSpotify特徴量のみ抽出
             features = {
@@ -152,7 +155,7 @@ def preprocess_music_data(input_csv, output_csv):
             print(f"エラーが発生しました: {e}")
             fail_list.append({track_id})
             continue
-
+        
     features_df = pd.DataFrame(features_list)
     df = pd.concat([df.reset_index(drop=True), features_df], axis=1)
 
@@ -165,37 +168,98 @@ def preprocess_music_data(input_csv, output_csv):
     print(f"失敗したトラックID: {fail_list}")
     print(f"失敗したトラックの数: {len(fail_list)}")
 
+def normalize_and_encode_data(input_csv, output_csv_normalized):
+    """
+    指定されたCSVファイルの数値データを0-1に正規化し、カテゴリ特徴量をOne-Hotエンコードします。
+    """
+    df = pd.read_csv(input_csv)
+
+    # 数値データとカテゴリデータの識別
+    # 'key' と 'mode' は数値ですが、カテゴリとして扱うことが多いです。
+    # 必要に応じてこのリストを調整してください。
+    numerical_features = [
+        'popularity', 'duration_ms', 'tempo', 'key_confidence', 'energy',
+        'danceability', 'valence', 'instrumentalness', 'acousticness',
+        'loudness', 'segments_count', 'segments_avg_duration',
+        'beats_count', 'beats_regularity'
+    ]
+    # 'key' は音階（0-11）であり、数値ですが、カテゴリとして扱う方が適切です。
+    # 'mode' は長調/短調（0または1）であり、カテゴリとして扱います。
+    categorical_features = ['genre', 'key', 'mode'] 
+
+    # DataFrameに実際に存在する列のみを対象とする
+    numerical_features = [col for col in numerical_features if col in df.columns]
+    categorical_features = [col for col in categorical_features if col in df.columns]
+
+    # Min-Max Scaling
+    if numerical_features:
+        scaler = MinMaxScaler()
+        df[numerical_features] = scaler.fit_transform(df[numerical_features])
+        print(f"数値特徴量を0-1に正規化しました: {numerical_features}")
+    else:
+        print("0-1正規化する数値特徴量が見つかりませんでした。")
+
+    
+    if categorical_features:
+        encoder = OneHotEncoder(handle_unknown='ignore', sparse_output=False)
+        encoded_features = encoder.fit_transform(df[categorical_features])
+        # 新しいOne-Hotエンコードされた列名を取得
+        encoded_df = pd.DataFrame(encoded_features, columns=encoder.get_feature_names_out(categorical_features))
+        
+        # 元のカテゴリ特徴量列を削除し、エンコードされた特徴量を結合
+        df = pd.concat([df.drop(columns=categorical_features), encoded_df], axis=1)
+        print(f"カテゴリ特徴量をOne-Hotエンコードしました: {categorical_features}")
+    else:
+        print("One-Hotエンコードするカテゴリ特徴量が見つかりませんでした。")
+
+    # 処理後のデータを保存
+    os.makedirs(os.path.dirname(output_csv_normalized), exist_ok=True)
+    df.to_csv(output_csv_normalized, index=False)
+    print(f"正規化およびエンコードされたデータを {output_csv_normalized} に保存しました。")
+
 if __name__ == "__main__":
     # preprocess_music_data(
     #     input_csv="data/melosync_music_data.csv",
     #     output_csv="data/processed_music_data.csv"
     # )
-
+    
     # csvファイルのヘッダー並び替えたい
     # 担当者,アーティスト,曲名（optional）,URL,Happy/Excited,Angry/Frustrated,Tired/Sad,Relax/Chill,ジャンル,id,name,artists,genre,popularity,duration_ms,tempo,key,mode,key_confidence,energy,danceability,valence,instrumentalness,acousticness,loudness,segments_count,segments_avg_duration,beats_count,beats_regularity
     # →担当者,アーティスト,曲名（optional）,URL,id,name,artists,genre,popularity,duration_ms,tempo,key,mode,key_confidence,energy,danceability,valence,instrumentalness,acousticness,loudness,segments_count,segments_avg_duration,beats_count,beats_regularity,Happy/Excited,Angry/Frustrated,Tired/Sad,Relax/Chill,ジャンル
-
+    
     # ヘッダー並び替え
     df = pd.read_csv("data/processed_music_data.csv")
     df = df[['担当者', 'アーティスト', '曲名（optional）', 'URL', 'id', 'name', 'artists', 'genre', 'popularity', 'duration_ms', 'tempo', 'key', 'mode', 'key_confidence', 'energy', 'danceability', 'valence', 'instrumentalness', 'acousticness', 'loudness', 'segments_count', 'segments_avg_duration', 'beats_count', 'beats_regularity', 'Happy/Excited', 'Angry/Frustrated', 'Tired/Sad', 'Relax/Chill', 'ジャンル']]
     df.to_csv("data/processed_music_data.csv", index=False)
 
-    df = pd.read_csv("data/processed_music_data.csv")
-    df = df[['genre', 'popularity', 'duration_ms', 'tempo', 'key', 'mode', 'key_confidence', 'energy', 'danceability', 'valence', 'instrumentalness', 'acousticness', 'loudness', 'segments_count', 'segments_avg_duration', 'beats_count', 'beats_regularity', 'Happy/Excited']]
-    df.to_csv("data/processed_music_data_happy.csv", index=False)
+    
+    print("\n--- データ正規化とOne-Hotエンコードを開始します ---")
+    normalize_and_encode_data(
+        input_csv="data/processed_music_data.csv",
+        output_csv_normalized="data/music_data_normalized_encoded.csv" 
+    )
+    print("--- データ正規化とOne-Hotエンコードが完了しました ---")
+    
+    
+    if os.path.exists("data/music_data_normalized_encoded.csv"):
+        df_encoded = pd.read_csv("data/music_data_normalized_encoded.csv")
 
-    df = pd.read_csv("data/processed_music_data.csv")
-    df = df[['genre', 'popularity', 'duration_ms', 'tempo', 'key', 'mode', 'key_confidence', 'energy', 'danceability', 'valence', 'instrumentalness', 'acousticness', 'loudness', 'segments_count', 'segments_avg_duration', 'beats_count', 'beats_regularity', 'Angry/Frustrated']]
-    df.to_csv("data/processed_music_data_angry.csv", index=False)
+        emotion_columns = ['Happy/Excited', 'Angry/Frustrated', 'Tired/Sad', 'Relax/Chill']
+        
+       
+        all_feature_columns = [col for col in df_encoded.columns if col not in emotion_columns]
 
-    df = pd.read_csv("data/processed_music_data.csv")
-    df = df[['genre', 'popularity', 'duration_ms', 'tempo', 'key', 'mode', 'key_confidence', 'energy', 'danceability', 'valence', 'instrumentalness', 'acousticness', 'loudness', 'segments_count', 'segments_avg_duration', 'beats_count', 'beats_regularity', 'Tired/Sad']]
-    df.to_csv("data/processed_music_data_tired.csv", index=False)
-    df = pd.read_csv("data/processed_music_data.csv")
+      
+        df_encoded[all_feature_columns + ['Happy/Excited']].to_csv("data/music_data_happy_normalized_encoded.csv", index=False)
+        print("data/music_data_happy.csv を保存しました。")
 
-    df = df[['genre', 'popularity', 'duration_ms', 'tempo', 'key', 'mode', 'key_confidence', 'energy', 'danceability', 'valence', 'instrumentalness', 'acousticness', 'loudness', 'segments_count', 'segments_avg_duration', 'beats_count', 'beats_regularity', 'Relax/Chill']]
-    df.to_csv("data/processed_music_data_relax.csv", index=False)
+        df_encoded[all_feature_columns + ['Angry/Frustrated']].to_csv("data/music_data_angry_normalized_encoded.csv", index=False)
+        print("data/music_data_angry.csv を保存しました。")
 
+        df_encoded[all_feature_columns + ['Tired/Sad']].to_csv("data/music_data_tired_normalized_encoded.csv", index=False)
+        print("data/music_data_tired.csv を保存しました。")
 
-    # ４つの感情で実用的なのか。
-    # 歌詞考慮しないと限度ある。
+        df_encoded[all_feature_columns + ['Relax/Chill']].to_csv("data/music_data_relax_normalized_encoded.csv", index=False)
+        print("data/music_data_relax.csv を保存しました。")
+    else:
+        print("data/music_data_normalized_encoded.csv が見つかりません。正規化とエンコードのステップが完了していることを確認してください。")
