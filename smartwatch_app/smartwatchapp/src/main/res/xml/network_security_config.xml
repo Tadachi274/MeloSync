@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">192.168.11.3</domain> <!-- 例如你本機網路IP -->
+    </domain-config>
+</network-security-config>

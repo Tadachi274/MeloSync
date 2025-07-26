@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.131.58.227</domain> <!-- 例如你本機網路IP -->
+    </domain-config>
+</network-security-config>
