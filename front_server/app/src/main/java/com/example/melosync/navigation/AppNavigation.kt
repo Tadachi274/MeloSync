@@ -9,8 +9,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.melosync.data.Emotion
-import com.example.melosync.ui.auth.AuthRepository
-import com.example.melosync.ui.auth.SignInWithGoogleFunctions
 import com.example.melosync.ui.auth.LoginScreen
 import com.example.melosync.ui.home.HomeScreen
 import com.example.melosync.ui.main.MainScreen
