@@ -47,8 +47,7 @@ def get_max_playlist_information():
 
 if __name__ == '__main__':
     username = SPOTIPY_USERNAME  # ユーザー名を指定
-    max_playlist = get_max_playlist_information()
-    # max_playlist = get_max_playlist_information(username)
+    max_playlist = get_max_playlist_information(username)
     
     if max_playlist:
         print(f"item数が最大のプレイリスト{max_playlist['name']}のID: {max_playlist['id']}")
