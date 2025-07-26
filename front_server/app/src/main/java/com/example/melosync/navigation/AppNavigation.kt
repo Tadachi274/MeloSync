@@ -36,7 +36,6 @@ fun AppNavigation(
     val uiState by authViewModel.uiState.collectAsState()
     Log.d("Navigation","isLoggedIn:${uiState.isLoggedIn}")
     Log.d("Navigation","isSpotifyLoggedIn:${uiState.isSpotifyLoggedIn}")
-    println(!uiState.isLoggedIn && !uiState.isSpotifyLoggedIn)
     val startDestination = if (uiState.isLoggedIn && uiState.isSpotifyLoggedIn) Routes.HOME else Routes.LOGIN
 
 

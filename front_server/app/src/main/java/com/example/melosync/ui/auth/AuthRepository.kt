@@ -7,13 +7,16 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import android.util.Log
 
-private object PrefKeys {
-    val SPOTIFY_LOGGED_IN = booleanPreferencesKey("spotify_logged_in")
-}
+//private object PrefKeys {
+//    val SPOTIFY_LOGGED_IN = booleanPreferencesKey("spotify_logged_in")
+//}
+
 class AuthRepository(private val ctx: Context) {
     private val dataStore = ctx.dataStore
     private val JWT_KEY = stringPreferencesKey("jwt_token")
+    val SPOTIFY_LOGGED_IN = booleanPreferencesKey("spotify_logged_in")
 
     /** ID トークンをバックエンドに送って JWT をもらう */
     suspend fun loginRequest(): String? {
@@ -46,8 +49,16 @@ class AuthRepository(private val ctx: Context) {
     }
 
     suspend fun setSpotifyLoggedIn(loggedIn: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[PrefKeys.SPOTIFY_LOGGED_IN] = loggedIn
-        }
+        //dataStore.edit { prefs ->
+        //    prefs[PrefKeys.SPOTIFY_LOGGED_IN] = loggedIn
+        //}
+        dataStore.edit { it[SPOTIFY_LOGGED_IN] = loggedIn }
+        Log.d("AuthRepository","setSpotifyLoggedIn:${loggedIn}")
+    }
+
+    suspend fun hasSpotifyLoggedIn(): Boolean {
+        return dataStore.data
+            .map { prefs -> prefs[SPOTIFY_LOGGED_IN] ?: false }
+            .first()
     }
 }
