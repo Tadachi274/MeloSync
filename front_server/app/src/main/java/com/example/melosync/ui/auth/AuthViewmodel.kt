@@ -26,8 +26,11 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         // 起動時に既存トークンの有無をチェック
         viewModelScope.launch {
             val hasJwt = repository.hasJwt()
-            println("[AuthViewmodel] hasJwt:${hasJwt}")
+            Log.d("[AuthViewmodel]"," hasJwt:${hasJwt}")
             _uiState.update { it.copy(isLoggedIn = hasJwt) }
+            val hasSpotifyLoggedIn = repository.hasSpotifyLoggedIn()
+            Log.d("[AuthViewmodel]","hasSpotifyLoggedIn:${hasSpotifyLoggedIn}")
+            _uiState.update { it.copy(isLoggedIn = hasSpotifyLoggedIn) }
         }
     }
 
