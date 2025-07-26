@@ -67,7 +67,9 @@ dependencies {
     // Retrofit (Web API通信用)
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)
-    // テストライブラリ
+    implementation("io.coil-kt:coil-compose:2.6.0")
+//    implementation("io.coil-kt.coil3:coil-compose:3.3.0")
+//     テストライブラリ
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

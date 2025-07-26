@@ -40,7 +40,6 @@ async def google_login():
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid Google ID token")
 
-
     access_token = create_jwt(user_id)
     print("access_token:", access_token)
     return {"access_token": access_token}

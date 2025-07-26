@@ -13,9 +13,10 @@ import com.example.melosync.ui.auth.LoginScreen
 import com.example.melosync.ui.home.HomeScreen
 import com.example.melosync.ui.main.MainScreen
 import android.util.Log
-
-
 import com.example.melosync.ui.auth.AuthViewModel
+import com.example.melosync.ui.setting.SettingScreen
+import com.example.melosync.ui.spotify.SpotifyViewModel // SpotifyViewModelをインポート
+import androidx.lifecycle.viewmodel.compose.viewModel // ViewModelをインポート
 
 // 画面遷移のルートを定義
 object Routes {
@@ -36,10 +37,12 @@ fun AppNavigation(
     Log.d("Navigation","isSpotifyLoggedIn:${uiState.isSpotifyLoggedIn}")
     val startDestination = if (uiState.isLoggedIn && uiState.isSpotifyLoggedIn) Routes.HOME else Routes.LOGIN
 
+    val spotifyViewModel: SpotifyViewModel = viewModel()
 
     NavHost(
         navController = navController,
         startDestination = startDestination
+
     ) {
         composable(Routes.LOGIN) {
             LoginScreen(
@@ -55,6 +58,8 @@ fun AppNavigation(
                     navController.navigate("main/${emotion.name}")
                 },
                 authViewModel = authViewModel
+                },
+                spotifyViewModel = spotifyViewModel,
             )
         }
 
@@ -69,14 +74,29 @@ fun AppNavigation(
 
             MainScreen(
                 emotion = emotion,
+                spotifyViewModel = spotifyViewModel,
                 onNavigateToSettings = {
                     // TODO: 設定画面への遷移を実装
-                    // navController.navigate(Routes.SETTINGS)
+                     navController.navigate(Routes.SETTINGS)
+                },
+                onNavigateToHome = {
+                    navController.navigate(Routes.HOME)
                 }
             )
         }
 
         // TODO: 設定画面のComposableをここに追加
-        // composable(Routes.SETTINGS) { ... }
+        composable(Routes.SETTINGS) {
+            SettingScreen(
+                onConfirm = {
+                    navController.navigate("main/${Emotion.HAPPY.name}")
+                },
+                spotifyViewModel = spotifyViewModel,
+                onDismissRequest = {
+                    // TODO: 設定画面への遷移を実装
+                    navController.navigate(Routes.SETTINGS)
+                }
+            )
+        }
     }
 }
