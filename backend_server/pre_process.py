@@ -24,12 +24,12 @@ def get_soundstat_track_info(spotify_track_id: str):
 
     # Soundstat APIのエンドポイント
     api_url = f"https://soundstat.info/api/v1/track/{spotify_track_id}"
-    
+
     # リクエストヘッダーにAPIキーを設定
     headers = {
         "X-API-Key": api_key
     }
-    
+
     # クエリパラメータにトラックIDを設定
     params = {
         "id": spotify_track_id
@@ -40,7 +40,7 @@ def get_soundstat_track_info(spotify_track_id: str):
     try:
         # response = requests.get(api_url, headers=headers, params=params)
         response = requests.get(api_url, headers=headers)
-        
+
         # リクエストが成功したかチェック
         response.raise_for_status()  # 200番台以外のステータスコードの場合に例外を発生させる
 
@@ -52,14 +52,14 @@ def get_soundstat_track_info(spotify_track_id: str):
         print(f"レスポンス内容: {response.text}")
     except requests.exceptions.RequestException as req_err:
         print(f"リクエストエラーが発生しました: {req_err}")
-    
+
     return None
 
 # # --- 以下、実行例 ---
 # if __name__ == "__main__":
 #     # 情報を取得したいSpotifyのトラックIDを指定
 #     # 例: 嵐 - 「HAPPINESS」
-#     track_id_to_analyze = "0Ns63lt28epRgED3Tnhmth" 
+#     track_id_to_analyze = "0Ns63lt28epRgED3Tnhmth"
 
 #     # 関数を呼び出して楽曲情報を取得
 #     track_info = get_soundstat_track_info(track_id_to_analyze)
@@ -69,7 +69,7 @@ def get_soundstat_track_info(spotify_track_id: str):
 #         print("\n✅ 楽曲情報の取得に成功しました。")
 #         # 結果をきれいにフォーマットして表示
 #         print(json.dumps(track_info, indent=2, ensure_ascii=False))
-    
+
 
 def extract_track_id_from_url(url):
     try:
@@ -110,12 +110,12 @@ def preprocess_music_data(input_csv, output_csv):
             continue
         track_info = get_soundstat_track_info(track_id)
         print(track_info)
-        
+
         if track_info is None:
             features_list.append({})
             print(f"track_id: {track_id} の情報が取得できませんでした。")
             continue
-        
+
         try:
             # 必要なSpotify特徴量のみ抽出
             features = {
@@ -152,7 +152,7 @@ def preprocess_music_data(input_csv, output_csv):
             print(f"エラーが発生しました: {e}")
             fail_list.append({track_id})
             continue
-        
+
     features_df = pd.DataFrame(features_list)
     df = pd.concat([df.reset_index(drop=True), features_df], axis=1)
 
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     # csvファイルのヘッダー並び替えたい
     # 担当者,アーティスト,曲名（optional）,URL,Happy/Excited,Angry/Frustrated,Tired/Sad,Relax/Chill,ジャンル,id,name,artists,genre,popularity,duration_ms,tempo,key,mode,key_confidence,energy,danceability,valence,instrumentalness,acousticness,loudness,segments_count,segments_avg_duration,beats_count,beats_regularity
     # →担当者,アーティスト,曲名（optional）,URL,id,name,artists,genre,popularity,duration_ms,tempo,key,mode,key_confidence,energy,danceability,valence,instrumentalness,acousticness,loudness,segments_count,segments_avg_duration,beats_count,beats_regularity,Happy/Excited,Angry/Frustrated,Tired/Sad,Relax/Chill,ジャンル
-    
+
     # ヘッダー並び替え
     df = pd.read_csv("data/processed_music_data.csv")
     df = df[['担当者', 'アーティスト', '曲名（optional）', 'URL', 'id', 'name', 'artists', 'genre', 'popularity', 'duration_ms', 'tempo', 'key', 'mode', 'key_confidence', 'energy', 'danceability', 'valence', 'instrumentalness', 'acousticness', 'loudness', 'segments_count', 'segments_avg_duration', 'beats_count', 'beats_regularity', 'Happy/Excited', 'Angry/Frustrated', 'Tired/Sad', 'Relax/Chill', 'ジャンル']]
@@ -183,4 +183,3 @@ if __name__ == "__main__":
     
     # ４つの感情で実用的なのか。
     # 歌詞考慮しないと限度ある。
-    
