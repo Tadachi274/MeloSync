@@ -277,7 +277,7 @@ def process_tracks_directly(track_ids: list) -> pd.DataFrame:
     features_list = []
     fail_list = []
 
-    chunk_size = 30
+    chunk_size = 100
     id_chunks = [track_ids[i:i + chunk_size] for i in range(0, len(track_ids), chunk_size)]
 
     for i, chunk in enumerate(id_chunks):
