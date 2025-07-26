@@ -69,8 +69,8 @@ fun LoginScreen(
                     }) {
                         Text("Spotifyで認証")
                     }
-                    Spacer(modifier = Modifier.height(120.dp))
-                    LogoutButton { authViewModel.logout() }
+                    //Spacer(modifier = Modifier.height(120.dp))
+                    //LogoutButton { authViewModel.logout() }
                 }
             }
             else -> {

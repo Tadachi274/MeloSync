@@ -86,8 +86,6 @@ fun HomeScreen(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(120.dp))
-            LogoutButton { authViewModel.logout() }
         }
     }
 }
