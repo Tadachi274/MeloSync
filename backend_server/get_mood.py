@@ -12,7 +12,7 @@ class HeartRate(BaseModel):
     heartrate: int  # 只接心跳速率
 
 class EmotionInput(BaseModel):
-    mood: str  # 例如 "HAPPY", "SAD", "NEUTRAL"
+    mood: str  # 例如 "positive", "negative", "neutral"
 
 last_heart_rate = None
 previous_heart_rate = None
@@ -34,13 +34,13 @@ def analyze_emotion_via_openai(heart_rate, positive):
     prompt = f"""
     現在、ユーザの心拍の時系列は {heart_rate} でした。
     ユーザが選んだ気持ちは{positive}でした。
-    以上の状態により、ユーザは今、Happy/Excited (1), Angry/Frustrated (2), Tired/Sad (3), Relax/Chill (4)、四つの感情の中で、どの感情ですか？
+    以上の状態により、ユーザは今、「Happy/Excited」「Angry/Frustrated」「Tired/Sad」「Relax/Chill」、四つの感情の中で、どの感情ですか？
     """
 
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "あなたは感情推定の専門家です。ユーザの心拍データと気持ちにより、Happy/Excited (=1), Angry/Frustrated (=2), Tired/Sad (=3), Relax/Chill (=4)から一つの感情を返信してください。フォーマット：1, 2, 3, 4"},
+            {"role": "system", "content": "あなたは感情推定の専門家です。ユーザの心拍データと気持ちにより、「Happy/Excited」「Angry/Frustrated」「Tired/Sad」「Relax/Chill」から一つの感情を返信してください。フォーマット：「Happy/Excited」「Angry/Frustrated」「Tired/Sad」「Relax/Chill」"},
             {"role": "user", "content": prompt}
         ],
         max_tokens=150,
@@ -86,23 +86,16 @@ async def analyze_emotion(data: EmotionInput):
     if heart_rate is []:
          return {"error": "尚未收到任何心跳資料"}
     
-    if data.mood == "SAD":
-        user_mood = "NEGATIVE"
-    elif data.mood == "HAPPY":
-        user_mood = "POSITIVE"
-    else:
-        user_mood = data.mood
+    user_mood = data.mood
     #current_bpm = last_heart_rate['heartrate']
 
     # if previous_heart_rate is None:
     #     delta_bpm = 0
     # else:
     #     delta_bpm = current_bpm - previous_heart_rate['heartrate']
-    
 
     emotion = analyze_emotion_via_openai(heart_rate, positive=user_mood)
 
-    print(f"[POST /analyze_emotion] Received mood: {data.mood} and the result is {emotion}.")
     return {"emotion": emotion}
 
 # 用 uvicorn 執行：uvicorn fastAPI.main:app --reload --host 0.0.0.0 --port 5000
