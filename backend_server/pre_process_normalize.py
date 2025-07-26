@@ -185,7 +185,7 @@ def normalize_and_encode_data(input_csv, output_csv_normalized):
     ]
     # 'key' は音階（0-11）であり、数値ですが、カテゴリとして扱う方が適切です。
     # 'mode' は長調/短調（0または1）であり、カテゴリとして扱います。
-    categorical_features = ['genre', 'key', 'mode'] 
+    categorical_features = ['genre', 'key'] 
 
     # DataFrameに実際に存在する列のみを対象とする
     numerical_features = [col for col in numerical_features if col in df.columns]
@@ -216,6 +216,149 @@ def normalize_and_encode_data(input_csv, output_csv_normalized):
     os.makedirs(os.path.dirname(output_csv_normalized), exist_ok=True)
     df.to_csv(output_csv_normalized, index=False)
     print(f"正規化およびエンコードされたデータを {output_csv_normalized} に保存しました。")
+
+def normalize_and_encode_dataframe(df):
+    """
+    DataFrameの数値データを0-1に正規化し、カテゴリ特徴量をOne-Hotエンコードします。
+    CSVを介さずに直接DataFrameを処理します。
+    """
+    if df.empty:
+        print("入力DataFrameが空です。")
+        return df
+
+    # 数値データとカテゴリデータの識別
+    numerical_features = [
+        'popularity', 'duration_ms', 'tempo', 'key_confidence', 'energy',
+        'danceability', 'valence', 'instrumentalness', 'acousticness',
+        'loudness', 'segments_count', 'segments_avg_duration',
+        'beats_count', 'beats_regularity'
+    ]
+    categorical_features = ['key']  # modeとgenreを除外
+
+    # DataFrameに実際に存在する列のみを対象とする
+    numerical_features = [col for col in numerical_features if col in df.columns]
+    categorical_features = [col for col in categorical_features if col in df.columns]
+
+    # Min-Max Scaling
+    if numerical_features:
+        scaler = MinMaxScaler()
+        df[numerical_features] = scaler.fit_transform(df[numerical_features])
+        print(f"数値特徴量を0-1に正規化しました: {numerical_features}")
+    else:
+        print("0-1正規化する数値特徴量が見つかりませんでした。")
+
+    # One-Hot Encoding
+    if categorical_features:
+        encoder = OneHotEncoder(handle_unknown='ignore', sparse_output=False)
+        encoded_features = encoder.fit_transform(df[categorical_features])
+        # 新しいOne-Hotエンコードされた列名を取得
+        encoded_df = pd.DataFrame(encoded_features, columns=encoder.get_feature_names_out(categorical_features))
+        
+        # key列を0.0〜11.0で固定（プレイリストに含まれるkeyに関係なく12個の列を生成）
+        if 'key' in categorical_features:
+            # 全てのkey列（key_0.0〜key_11.0）を生成
+            all_key_columns = [f'key_{i}.0' for i in range(12)]
+            
+            # 現在のDataFrameに存在するkey列を取得
+            existing_key_columns = [col for col in encoded_df.columns if col.startswith('key_')]
+            
+            # 存在しないkey列を0で埋めて追加
+            for key_col in all_key_columns:
+                if key_col not in existing_key_columns:
+                    encoded_df[key_col] = 0
+            
+            # 列の順序を統一（key_0.0〜key_11.0の順）
+            key_columns_ordered = [f'key_{i}.0' for i in range(12)]
+            other_columns = [col for col in encoded_df.columns if not col.startswith('key_')]
+            encoded_df = encoded_df[key_columns_ordered + other_columns]
+        
+        # 元のカテゴリ特徴量列を削除し、エンコードされた特徴量を結合
+        df = pd.concat([df.drop(columns=categorical_features), encoded_df], axis=1)
+        print(f"カテゴリ特徴量をOne-Hotエンコードしました: {categorical_features}")
+    else:
+        print("One-Hotエンコードするカテゴリ特徴量が見つかりませんでした。")
+    print(df.columns)
+    return df
+
+def process_tracks_directly(track_ids: list) -> pd.DataFrame:
+    """
+    トラックIDのリストを受け取り、SoundStat APIから特徴量を取得し、
+    pre_process_normalize.pyと同じ前処理を行ってDataFrameを返します。
+    CSVを介さずに直接処理します。
+    """
+    if not track_ids:
+        return pd.DataFrame()
+
+    features_list = []
+    fail_list = []
+    
+    for idx, track_id in enumerate(track_ids):
+        print(f"処理中: {idx+1}/{len(track_ids)} - {track_id}")
+        
+        track_info = get_soundstat_track_info(track_id)
+        
+        if track_info is None:
+            fail_list.append(track_id)
+            print(f"track_id: {track_id} の情報が取得できませんでした。")
+            continue
+        
+        try:
+            # pre_process_normalize.pyと同じ特徴量抽出（modeとgenreを除外）
+            features = {
+                # 'id': track_info['id'],
+                # 'name': track_info['name'],
+                # 'artists': track_info['artists'],
+                'popularity': track_info['popularity'],
+                'duration_ms': track_info['duration_ms'],
+
+                # Audio features（modeを除外）
+                'tempo': track_info['features']['tempo'],
+                'key': track_info['features']['key'],
+                'key_confidence': track_info['features']['key_confidence'],
+                'energy': track_info['features']['energy'],
+                'danceability': track_info['features']['danceability'],
+                'valence': track_info['features']['valence'],
+                'instrumentalness': track_info['features']['instrumentalness'],
+                'acousticness': track_info['features']['acousticness'],
+                'loudness': track_info['features']['loudness'],
+
+                # Segments info
+                'segments_count': track_info['features']['segments']['count'],
+                'segments_avg_duration': track_info['features']['segments']['average_duration'],
+
+                # Beats info
+                'beats_count': track_info['features']['beats']['count'],
+                'beats_regularity': track_info['features']['beats']['regularity'],
+            }
+            features_list.append(features)
+            time.sleep(0.1)  # API制限対策
+        except Exception as e:
+            print(f"エラーが発生しました: {e}")
+            fail_list.append(track_id)
+            continue
+    
+    if not features_list:
+        print("有効な特徴量を取得できませんでした。")
+        return pd.DataFrame()
+    
+    # DataFrameに変換
+    df = pd.DataFrame(features_list)
+    
+    # 欠損値除去
+    df = df.dropna()
+    
+    if df.empty:
+        print("欠損値除去後、有効なデータが残りませんでした。")
+        return pd.DataFrame()
+    
+    # 正規化とエンコード
+    df = normalize_and_encode_dataframe(df)
+    
+    print(f"前処理完了: {len(df)} 曲の特徴量を処理しました。")
+    print(f"失敗したトラックID: {fail_list}")
+    print(f"失敗したトラックの数: {len(fail_list)}")
+    
+    return df
 
 if __name__ == "__main__":
     # preprocess_music_data(
