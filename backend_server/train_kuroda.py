@@ -9,21 +9,24 @@ import matplotlib.pyplot as plt
 import xgboost as xgb
 from sklearn.svm import SVC
 from sklearn.preprocessing import LabelEncoder
+import joblib
+from sklearn.linear_model import LogisticRegression
+import lightgbm as lgb
 
 # 各CSVファイルのパス
-dataset_files = [
-    'data/music_data_happy_normalized_encoded.csv', 
-    'data/music_data_angry_normalized_encoded.csv', 
-    'data/music_data_tired_normalized_encoded.csv', 
-    'data/music_data_relax_normalized_encoded.csv'
-]
+dataset_files = {
+    'Happy/Excited': 'data/music_data_happy_normalized_encoded.csv',
+    'Angry/Frustrated': 'data/music_data_angry_normalized_encoded.csv',
+    'Tired/Sad': 'data/music_data_tired_normalized_encoded.csv',
+    'Relax/Chill': 'data/music_data_relax_normalized_encoded.csv'
+}
 
 # --- ★ 1. 初期化 ---
 results_summary = []
 all_feature_importances = [] # 全モデルの重要度を保存するリスト
 
 # --- ★ 2. ループ処理で各CSVファイルに対してモデルを構築 ---
-for file_path in dataset_files:
+for emotion, file_path in dataset_files.items():
     print(f"=================================================")
     print(f"処理中のファイル: {file_path}")
     print(f"=================================================")
@@ -46,10 +49,11 @@ for file_path in dataset_files:
     
     # 最初の7列と不要な列を除外
     df = df.iloc[:, 7:]
-    if 'mode_0.0' in df.columns and 'mode_1.0' in df.columns:
-        df = df.drop(columns=['mode_0.0', 'mode_1.0'])
+    df = df.drop(columns=['mode_0.0', 'mode_1.0'])
+    df = df.drop(columns=['genre_nan', 'genre_acoustic', 'genre_alt-rock', 'genre_alternative', 'genre_anime', 'genre_dance', 'genre_edm', 'genre_electro', 'genre_electronic', 'genre_garage', 'genre_grunge', 'genre_hip-hop', 'genre_indie', 'genre_indie pop', 'genre_j-dance', 'genre_j-idol', 'genre_j-pop', 'genre_j-rock', 'genre_k-pop', 'genre_mandopop', 'genre_metal', 'genre_pop', 'genre_punk', 'genre_punk-rock', 'genre_r&b', 'genre_reggae', 'genre_rock', 'genre_rockabilly', 'genre_singer-songwriter', 'genre_soul', 'genre_techno', 'genre_trance', 'genre_trip-hop', 'genre_turkish'])
     if 'ジャンル' in df.columns:
         df = df.drop(columns=['ジャンル'])
+    print(df.columns)
 
     # 特徴量と正解ラベルの分割
     X = df.iloc[:, :-1]
@@ -71,10 +75,10 @@ for file_path in dataset_files:
     
     # モデルの学習
     # ロジスティック回帰
-    # model = LogisticRegression(multi_class='multinomial', solver='lbfgs', random_state=42, max_iter=1000)
+    model = LogisticRegression(multi_class='multinomial', solver='lbfgs', random_state=42, max_iter=1000)
     
     # ランダムフォレスト
-    model = RandomForestClassifier(random_state=42)
+    # model = RandomForestClassifier(random_state=42)
     
     # LightGBM
     # model = lgb.LGBMClassifier(random_state=42)
@@ -101,6 +105,11 @@ for file_path in dataset_files:
     # all_feature_importances.append(feature_importance_df)
 
     # ... (モデルの評価や保存処理は変更なし) ...
+    # --- モデルの保存 ---
+    model_filename = f"model/model_{emotion.replace('/', '-')}.joblib"
+    joblib.dump(model, model_filename)
+    print(f"モデルを '{model_filename}' に保存しました。")
+    
     y_pred = model.predict(X_test)
     y_pred_proba = model.predict_proba(X_test)
     accuracy = accuracy_score(y_test, y_pred)

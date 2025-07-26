@@ -13,11 +13,11 @@ load_dotenv()
 # --- 分離したモジュールから必要な機能を取得 ---
 from spotify_utils import get_playlist_tracks
 from recommend import recommend_songs_for_target
-from feature_processor import process_tracks
+from pre_process_normalize import process_tracks_directly
 
 # --- ユーザー設定 ---
 # ここにあなたのSpotifyプレイリストのURLを入力してください
-PLAYLIST_URL = 'https://open.spotify.com/playlist/53hcnFSWtcg7otg3rnVHkK?si=FwUmyRPoT5uqbfPZJ8f-Rg' 
+PLAYLIST_URL = 'https://open.spotify.com/playlist/6rEdUNfBu6BiWgp0PNXIO4?si=1611984fbf574d02' 
 user_start_mood_name = 'Tired/Sad'
 user_target_mood_name ='Happy/Excited'
 
@@ -55,9 +55,9 @@ def main():
             return
         print(f"情報: {len(track_ids)} 曲のトラックを正常に取得しました。")
             
-        # 3. 中央プロセッサを呼び出してすべての特徴を取得・処理
-        print("情報: SoundStatから特徴を取得し、前処理を行っています...")
-        processed_df = process_tracks(track_ids)
+        # 3. 【修正】pre_process_normalize.pyの関数を使用
+        print("情報: SoundStatから特徴を取得し、pre_process_normalize.pyの方法で前処理を行っています...")
+        processed_df = process_tracks_directly(track_ids)
 
         if processed_df.empty:
             print("エラー: 楽曲の特徴を処理できませんでした。")
@@ -67,7 +67,7 @@ def main():
         X_playlist = processed_df.drop(columns=['id'])
         
         # 4. モデルを読み込んで推薦を生成
-        model_filename = f"model_{user_start_mood_name.replace('/', '-')}.joblib"
+        model_filename = f"model/model_{user_start_mood_name.replace('/', '-')}.joblib"
         print(f"情報: モデル '{model_filename}' を読み込み中...")
         model = joblib.load(model_filename)
         
