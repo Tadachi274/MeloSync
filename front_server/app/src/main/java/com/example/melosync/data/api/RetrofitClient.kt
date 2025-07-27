@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit
 object RetrofitClient {
 
     // 1. あなたのバックエンドサーバーのURL
-    private const val BACKEND_BASE_URL = "http://10.0.2.2:8000/" // Androidエミュレータ用のIP
+    private const val BACKEND_BASE_URL = "http://10.0.2.2:8003/" // Androidエミュレータ用のIP
 
     // 2. Spotify Web APIのURL
     private const val SPOTIFY_API_BASE_URL = "https://api.spotify.com/"
