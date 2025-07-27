@@ -18,6 +18,7 @@ import psycopg2
 from datetime import datetime, timezone
 from pathlib import Path
 import get_save_accesstoken as db_utils
+import return_jwt as return_jwt
 
 # ─── 環境変数読み込み ─────────────────────────────────────
 load_dotenv()
@@ -56,16 +57,6 @@ app = FastAPI()
 class GoogleLoginRequest(BaseModel):
     id_token: str
 
-
-# ─── JWT 発行関数 ─────────────────────────────────────────
-def create_jwt(user_id: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(hours=ACCESS_TOKEN_EXPIRE_MINUTES)
-    payload = {
-        "user_id": user_id,
-        "exp": expire
-    }
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-
 # ─── エンドポイント：Google ログイン → JWT 返却 ────────────────
 @app.post("/api/auth/google-login")
 async def google_login():
@@ -75,8 +66,7 @@ async def google_login():
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid Google ID token")
 
-
-    access_token = create_jwt(user_id)
+    access_token = return_jwt.create_jwt(user_id)
     print("access_token:", access_token)
     return {"access_token": access_token}
 
@@ -101,7 +91,7 @@ async def refresh_token(authorization: str = Header(...)):
         # Check if the token has expired
         if datetime.fromtimestamp(exp, timezone.utc) < datetime.now(timezone.utc):
             # Issue a new JWT
-            new_token = create_jwt(user_id)
+            new_token = return_jwt.create_jwt(user_id)
             return {"access_token": new_token}
         else:
             return {"access_token": token}  # Return the same token if not expired

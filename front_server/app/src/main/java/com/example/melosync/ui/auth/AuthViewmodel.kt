@@ -18,9 +18,11 @@ data class AuthUiState(
 
 class AuthViewModel(app: Application) : AndroidViewModel(app) {
     private val repository = AuthRepository(app.applicationContext)
-
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
+
+    private val _jwt = MutableStateFlow<String?>(null)
+    val jwt: StateFlow<String?> = _jwt
 
     init {
         // 起動時に既存トークンの有無をチェック
@@ -45,6 +47,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                 Log.d("AuthViewmodel","jwt:${jwt}")
                 if (jwt != null) {
                     repository.saveJwt(jwt)
+                    _jwt.value = jwt
                     _uiState.update { it.copy(isLoggedIn = true) }
                     _uiState.update { it.copy(isSpotifyLoggedIn = false) }
                 } else {
