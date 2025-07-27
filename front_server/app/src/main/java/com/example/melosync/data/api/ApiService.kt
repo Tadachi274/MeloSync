@@ -30,20 +30,19 @@ interface ApiService {
      * (2) getEmotionPlaylist: フォーム形式のボディ、返り値あり
      * ヘッダーにJWTを付与し、リクエストボディをフォーム形式で送信します。
      */
-    @FormUrlEncoded
     @POST("api/playlist/emotion")
     suspend fun getEmotionPlaylist(
         @Header("Authorization") token: String,
-        @Field("before_emotion") before_emotion: String,
-        @Field("after_emotion") after_emotion: String,
-        @Field("chosen_playlists") chosen_playlists: List<String> // List<String>として送信
+        @Query("before_emotion") before_emotion: String,
+        @Query("after_emotion") after_emotion: String,
+        @Query("chosen_playlist") chosen_playlists: List<String> // List<String>として送信
     ): Response<EmotionPlaylistResponse>
 
     /**
      * (3) getPlaylistList: ボディなし、返り値あり
      * ヘッダーにJWTを付与してPOSTリクエストを送信します。
      */
-    @POST("api/playlist")
+    @POST("api/playlists")
     suspend fun getPlaylistList(
         @Header("Authorization") token: String
     ): Response<PlaylistListResponse>

@@ -2,6 +2,7 @@ package com.example.melosync.ui.main
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -261,6 +262,7 @@ fun MainScreen(
                 Button(
                     modifier = Modifier.weight(1f), // ← weightを追加
                     onClick = {
+                        Log.d("Main","Click更新")
 //                        Toast.makeText(context, "プレイリスト更新は後で実装します", Toast.LENGTH_SHORT).show()
 //                        spotifyViewModel.play("spotify:track:7v6DqVMaljJDUXYavMY4kf")
                         spotifyViewModel.loadQueue()
