@@ -1,6 +1,7 @@
 package com.example.melosync.ui.spotify
 
 import android.app.Activity
+import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.util.Log
@@ -12,6 +13,7 @@ import com.example.melosync.data.api.Playlist
 import com.example.melosync.data.api.TrackAPI
 import com.example.melosync.data.SendEmotion
 import android.graphics.Bitmap
+import androidx.lifecycle.AndroidViewModel
 import com.example.melosync.data.api.CurrentlyPlayingContext
 import com.example.melosync.data.api.PlayRequest
 import com.spotify.android.appremote.api.ConnectionParams
@@ -20,6 +22,7 @@ import com.spotify.android.appremote.api.SpotifyAppRemote
 import com.spotify.protocol.types.PlayerState
 import com.spotify.protocol.types.Track
 import com.example.melosync.data.api.RetrofitClient
+import com.example.melosync.ui.auth.AuthRepository
 import com.spotify.sdk.android.auth.AuthorizationClient
 import com.spotify.sdk.android.auth.AuthorizationRequest
 import com.spotify.sdk.android.auth.AuthorizationResponse
@@ -29,12 +32,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.google.gson.Gson
 
 
 private const val CLIENT_ID = "ced2ee375b444183a40d0a95de22d132" // あなたのClientIDに書き換えてください
 private const val REDIRECT_URI = "com.example.melosync://callback"
 
-class SpotifyViewModel : ViewModel() {
+class SpotifyViewModel(app: Application) : AndroidViewModel(app) {
+    private val repository = AuthRepository(app.applicationContext)
+    val TAG = "SpotifyViewModel"
 
     // バックエンドとの通信用
     private val backendApiService: ApiService = RetrofitClient.backendApi
@@ -164,8 +170,12 @@ class SpotifyViewModel : ViewModel() {
         }
     }
 
-    fun setJwt(token: String?) {
-        _jwt.value = token
+    fun setJwt() {
+        viewModelScope.launch {
+            val jwt = repository.getJwt()
+            Log.d(TAG,"setJwt.jwt:${jwt}")
+            _jwt.value = jwt
+        }
     }
 
     // --- Web APIを使った再生コントロール ---
@@ -220,17 +230,18 @@ class SpotifyViewModel : ViewModel() {
         }
     }
 
-    fun fetchEmotionPlaylist(
+    suspend fun fetchEmotionPlaylist(
         beforeEmotion: SendEmotion,
         afterEmotion: SendEmotion,
         chosenPlaylists: List<String>
     ) {
-        viewModelScope.launch {
+        Log.d(TAG,"fetchEmotionPlaylist")
             // 1. JWTの準備
             val token = _jwt.value // ★accessTokenからjwtに変更
+            Log.d(TAG,"fetchE.token:${token}" )
             if (token == null) {
                 Log.e("SpotifyViewModel", "JWT is not available.")
-                return@launch
+                return
             }
             // Bearerプレフィックスは通常、ヘッダーに含めます
             val authHeader = "Bearer $token"
@@ -241,38 +252,35 @@ class SpotifyViewModel : ViewModel() {
             _isLoading.value = true
 
             try {
-                // 3. API呼び出しの実行
                 val response = backendApiService.getEmotionPlaylist(
-                    token = authHeader, // ★JWTを渡す
+                    token = authHeader,
                     before_emotion = beforeEmotionStr,
                     after_emotion = afterEmotionStr,
                     chosen_playlists = chosenPlaylists
                 )
-                // 4. 結果のハンドリング
                 if (response.isSuccessful) {
-                    val playlistResponse = response.body()
-                    playlistResponse?.data?.let { tracks ->
-                        _playbackQueue.value = tracks
-                        Log.d("SpotifyViewModel", "Successfully fetched ${tracks.size} tracks.")
-                    }
+                    val tracks = response.body()?.data ?: emptyList()
+                    Log.d(TAG, "Successfully fetched ${tracks.size} tracks.")
+                    Log.d(TAG,"tracks:${tracks}")
+                    _playbackQueue.value = tracks
                 } else {
                     val errorBody = response.errorBody()?.string()
                     _error.value = "Playlist fetch failed: ${response.code()}"
-                    Log.e("SpotifyViewModel", "API Error: ${response.code()} $errorBody")
+                    Log.e(TAG, "API Error: ${response.code()} $errorBody")
                 }
             } catch (e: Exception) {
                 _error.value = "Error: ${e.message}"
-                Log.e("SpotifyViewModel", "Network request failed", e)
+                Log.e(TAG, "Network request failed", e)
             }
             finally {
                 _isLoading.value = false
-            }
+
         }
     }
 
     fun fetchPlaylistList() {
         viewModelScope.launch {
-            val token = _jwt.value // ★accessTokenからjwtに変更
+            val token = _jwt.value
             if (token == null) {
                 Log.e("SpotifyViewModel", "JWT is not available.")
                 return@launch
@@ -282,7 +290,10 @@ class SpotifyViewModel : ViewModel() {
             try {
                 val response = backendApiService.getPlaylistList(authHeader)
                 if (response.isSuccessful) {
-                    _playlists.value = response.body()?.data ?: emptyList()
+                    val playlists = response.body()?.data ?: emptyList()
+                    val json = Gson().toJson(playlists)
+                    Log.d(TAG, "全プレイリストJSON: $json")
+                    _playlists.value = playlists
                 } else {
                     _error.value = "Playlist fetch failed: ${response.code()}"
                 }
@@ -347,11 +358,12 @@ class SpotifyViewModel : ViewModel() {
 
     fun loadPlaylists() {
         // viewModelScopeでコルーチンを開始
+        Log.d(TAG,"loadPlaylists")
         viewModelScope.launch {
             // TODO: ここで実際にバックエンドAPIを呼び出す
-            //fetchPlaylistList()
+            fetchPlaylistList()
             // 今回はダミーデータを表示
-            _playlists.value = dummyPlaylists
+            //_playlists.value = dummyPlaylists
 
         }
     }
@@ -364,12 +376,18 @@ class SpotifyViewModel : ViewModel() {
 
     fun loadQueue() {
         viewModelScope.launch {
+            Log.d(TAG,"LoadQueue")
             // TODO: ここで実際にバックエンドAPIを呼び出す
             val chosenPlaylists = abstractionChosenPlaylists()
-//            fetchEmotionPlaylist(SendEmotion.HAPPY, SendEmotion.RELAX, chosenPlaylists = chosenPlaylists)
+            Log.d(TAG,"loadQueue.chosenPlaylists:${chosenPlaylists}")
+            fetchEmotionPlaylist(SendEmotion.HAPPY, SendEmotion.HAPPY, chosenPlaylists = chosenPlaylists)
             // 今回はダミーデータを表示
-            _playbackQueue.value = dummyTrackLists
-            play("spotify:track:${_playbackQueue.value[0].trackId}")
+            //_playbackQueue.value = dummyTrackLists
+            if (_playbackQueue.value.isNotEmpty()) {
+                play("spotify:track:${_playbackQueue.value[0].trackId}")
+            } else {
+                Log.w(TAG, "Playback queue is empty, nothing to play.")
+            }
         }
     }
 

@@ -97,6 +97,7 @@ def get_emotion_playlist_tracks(
     sp: spotipy.Spotify,
     playlist_name: str
 ):
+    print(f"DEBUG: Searching for playlist '{playlist_name}'")
     # 既存プレイリスト検索
     target_id = None
     for pl in sp.current_user_playlists()["items"]:
@@ -139,6 +140,7 @@ def get_specific_playlist_tracks(
     playlist_ids: list
 ):
     track_info_list = []
+    seen_track_ids = set()  # 重複を避けるためのセット
     for playlist_id in playlist_ids:
         # プレイリストのトラックを全部取得
         tracks = []
@@ -152,13 +154,17 @@ def get_specific_playlist_tracks(
         for item in tracks:
             track = item["track"]
             track_id = track["id"]
+            if track_id in seen_track_ids:
+                continue  # 重複スキップ
+
+            seen_track_ids.add(track_id)
             image_uri = track["album"]["images"][0]["url"] if track["album"]["images"] else None
             artist_name = track["artists"][0]["name"] if track["artists"] else None
             track_name = track["name"]
 
             track_info_list.append({
                 "track_id": track_id,
-                "image_uri": image_uri,
+                "image_url": image_uri,
                 "artist_name": artist_name,
                 "track_name": track_name
             })
