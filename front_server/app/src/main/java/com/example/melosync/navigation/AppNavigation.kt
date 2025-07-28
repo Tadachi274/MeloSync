@@ -70,7 +70,7 @@ fun AppNavigation(
         ) { backStackEntry ->
             // 受け取った感情の文字列からenumに変換
             val emotionString = backStackEntry.arguments?.getString("emotion")
-            val emotion = SendEmotion.valueOf(emotionString ?: Emotion.NEUTRAL.name)
+            val emotion = SendEmotion.valueOf(emotionString ?: SendEmotion.HAPPY.name)
 
             MainScreen(
                 emotion = emotion,
