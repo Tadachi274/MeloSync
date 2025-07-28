@@ -85,6 +85,8 @@ fun HomeScreen(
                             scope.launch {
                                 try {
                                     Log.d("HomeScreen","EmotionButtonClick")
+                                    spotifyViewModel.setJwt() //JWTセット
+                                    spotifyViewModel.loadPlaylists()
                                     // 1. APIを呼び出し、レスポンスを取得
                                     val response = apiService.analyzeEmotion(Emotion2(emotion.name))
                                     Log.d("HomeScreen","analyzeEmotion:${response.isSuccessful}")
@@ -103,15 +105,11 @@ fun HomeScreen(
                                             // このブロック内では analyzedEmotion は non-null (SendEmotion型) として扱える
                                             Log.d("TransPage", "Analyzed as: ${analyzedEmotion.name}") // OK
                                             viewModel.onEmotionSelected(analyzedEmotion) // OK
-                                            spotifyViewModel.setJwt() //JWTセット
-                                            spotifyViewModel.loadPlaylists()
                                             onNavigateToMain(analyzedEmotion) // OK
                                         } else {
                                             // APIから返されたIDが不正で、enumが見つからなかった場合の処理
                                             Log.e("HomeScreen", "Invalid emotion ID from API: ${emotionResponse.emotion}. Falling back.")
                                             viewModel.onEmotionSelected(emotion.toSendEmotion())
-                                            spotifyViewModel.setJwt() //JWTセット
-                                            spotifyViewModel.loadPlaylists()
                                             onNavigateToMain(emotion.toSendEmotion())
                                         }
                                     } else {
@@ -119,16 +117,12 @@ fun HomeScreen(
                                         Log.e("HomeScreen", "API Error: ${response.errorBody()?.string()}")
                                         // エラー時も、クリックした感情で遷移させるなどのフォールバック処理
                                         viewModel.onEmotionSelected(emotion.toSendEmotion())
-                                        spotifyViewModel.setJwt() //JWTセット
-                                        spotifyViewModel.loadPlaylists()
                                         onNavigateToMain(emotion.toSendEmotion())
                                     }
                                 } catch (e: Exception) {
                                     // ネットワークエラーなどの例外処理
                                     Log.e("HomeScreen", "Exception: ${e.message}")
                                     viewModel.onEmotionSelected(emotion.toSendEmotion())
-                                    spotifyViewModel.setJwt() //JWTセット
-                                    spotifyViewModel.loadPlaylists()
                                     onNavigateToMain(emotion.toSendEmotion())
                                 }
                             }
