@@ -1,5 +1,18 @@
 # playlist_api.py
 import os
+import sys
+from dotenv import load_dotenv
+
+
+dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+
+print(f"DEBUG: Attempting to load .env file from: {dotenv_path}")
+
+load_dotenv(dotenv_path=dotenv_path)
+
+# --- ↑↑↑ 修改结束 ↑↑↑ ---
+
+# --- 后续的其他 import ---
 from fastapi import FastAPI, Depends, Header, HTTPException, Query
 from jose import jwt, JWTError
 import psycopg2
@@ -7,10 +20,9 @@ from cryptography.fernet import Fernet
 from datetime import datetime, timezone
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
-from dotenv import load_dotenv
+
+# 现在这个 import 就不会出错了
 import get_max_playlist
-import sys
-import os
 
 # backend_serverディレクトリをパスに追加
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend_server'))
@@ -98,7 +110,7 @@ def get_spotify(access_token: str, refresh_token: str, expires_at: int):
     return spotipy.Spotify(auth=access_token)
 
 
-# --- プレイリスト作成／更新処理（移行確率フィルタリング対応） ---
+# --- プレイリスト作成／更新処理（リファクタリング版） ---
 def create_or_update_playlist(
     sp: spotipy.Spotify,
     source_playlist_id: str,
@@ -107,29 +119,36 @@ def create_or_update_playlist(
     user_target_mood: str = None,
     min_probability: float = 0.4
 ) -> str:
+    """
+    指定された条件に基づいてSpotifyプレイリストを作成または更新します。
+    気分移行が指定された場合、generate_final_playlistから推薦を取得して歌单を生成します。
+    """
     me = sp.me()["id"]
-    # 既存プレイリスト検索
+
+    # --- ステップ1: 新しいプレイリストを作成、または同名の既存プレイリストを探す ---
+    target_playlist_id = None
     for pl in sp.current_user_playlists()["items"]:
         if pl["name"] == new_playlist_name:
-            target_id = pl["id"]
+            target_playlist_id = pl["id"]
+            print(f"既存のプレイリスト '{new_playlist_name}' (ID: {target_playlist_id}) を更新します。")
             break
     else:
-        target_id = sp.user_playlist_create(me, new_playlist_name, public=True)["id"]
+        # 見つからなければ新しく作成
+        new_playlist = sp.user_playlist_create(me, new_playlist_name, public=True)
+        target_playlist_id = new_playlist["id"]
+        print(f"新しいプレイリスト '{new_playlist_name}' (ID: {target_playlist_id}) を作成しました。")
 
-    # 元プレイリストのトラックを全部取得
-    uris = []
-    results = sp.playlist_items(source_playlist_id)
-    uris += [item["track"]["uri"] for item in results["items"]]
-    while results["next"]:
-        results = sp.next(results)
-        uris += [item["track"]["uri"] for item in results["items"]]
-
-    # 気分移行推薦が指定されている場合は、移行確率でフィルタリング
+    
+    uris_to_add = []
+    # --- ステップ2: 推薦ロジックを呼び出し、曲のIDリストを取得 ---
+    # 気分移行が指定されている場合、generate_final_playlistを呼び出す
     if user_start_mood and user_target_mood:
-        # プレイリストURLを作成
+        print("情報: generate_final_playlist から推薦リストを生成中...")
         playlist_url = f"https://open.spotify.com/playlist/{source_playlist_id}"
         
-        # 推薦楽曲を取得
+        # ★★★ ここが核心部分です ★★★
+        # generate_final_playlist.py の recommend_playlist を呼び出し、ランキングリストを取得します。
+        # recommended_playlist の形式: [(track_id, score), (track_id, score), ...]
         recommended_playlist = recommend_playlist(
             playlist_url=playlist_url,
             user_start_mood_name=user_start_mood,
@@ -137,49 +156,45 @@ def create_or_update_playlist(
         )
         
         if recommended_playlist:
-            # 移行確率が閾値以上の楽曲のみをフィルタリング
-            filtered_uris = []
+            # ランキングリストから track_id を抽出し、Spotify APIが要求するURI形式に変換します。
             for track_id, probability in recommended_playlist:
+                # 移行確率(score)が設定した閾値以上の場合のみリストに追加
                 if probability >= min_probability:
-                    # track_idをURIに変換
-                    track_uri = f"spotify:track:{track_id}"
-                    if track_uri in uris:  # 元プレイリストに存在する場合のみ
-                        filtered_uris.append(track_uri)
+                    uris_to_add.append(f"spotify:track:{track_id}")
             
-            print(f"移行確率{min_probability:.1%}以上の楽曲: {len(filtered_uris)}曲")
-            uris = filtered_uris
+            print(f"情報: 移行確率が {min_probability:.1%} 以上の楽曲 {len(uris_to_add)} 曲を処理対象にします。")
         else:
-            print("推薦楽曲の取得に失敗しました。popularityフィルタリングを使用します。")
-            # 推薦に失敗した場合は従来のpopularityフィルタリングを使用
-            filtered = []
-            for uri in uris:
-                track = sp.track(uri)
-                if track.get("popularity", 0) > 50:
-                    filtered.append(uri)
-            uris = filtered
+            print("警告: 推薦リストの生成に失敗しました。プレイリストは空のままです。")
+            # 推薦に失敗した場合、リストは空のままステップ3に進みます。
+            pass
+            
     else:
-        # 従来のpopularityフィルタリング
-        filtered = []
-        for uri in uris:
+        # (フォールバック処理) 気分移行が指定されない場合、元コードのpopularityフィルターを適用
+        print("情報: 気分移行が指定されていないため、popularity > 50 の曲をフィルタリングします。")
+        results = sp.playlist_items(source_playlist_id)
+        source_uris = [item["track"]["uri"] for item in results["items"] if item.get("track")]
+        while results["next"]:
+            results = sp.next(results)
+            source_uris += [item["track"]["uri"] for item in results["items"] if item.get("track")]
+
+        for uri in source_uris:
             track = sp.track(uri)
             if track.get("popularity", 0) > 50:
-                filtered.append(uri)
-        uris = filtered
+                uris_to_add.append(uri)
+    
+    # --- ステップ3: 抽出した曲をプレイリストに追加 ---
+    if uris_to_add:
+        # プレイリストの中身を完全に置き換える場合はこちらが効率的です。
+        # まずは100件ずつ追加します（APIの制限のため）
+        for i in range(0, len(uris_to_add), 100):
+            sp.playlist_add_items(target_playlist_id, uris_to_add[i:i+100])
+        
+        print(f"情報: {len(uris_to_add)} 曲をプレイリスト '{new_playlist_name}' に追加しました。")
 
-    # 既存プレイリストの中身を取得して重複を除外
-    existing = []
-    res2 = sp.playlist_items(target_id)
-    existing += [i["track"]["uri"] for i in res2["items"]]
-    while res2["next"]:
-        res2 = sp.next(res2)
-        existing += [i["track"]["uri"] for i in res2["items"]]
+    else:
+        print("情報: 追加する曲がありませんでした。")
 
-    to_add = [u for u in uris if u not in existing]
-    # 100件ずつ追加
-    for i in range(0, len(to_add), 100):
-        sp.playlist_add_items(target_id, to_add[i:i+100])
-
-    return target_id
+    return target_playlist_id
 
 
 # --- API エンドポイント ---
