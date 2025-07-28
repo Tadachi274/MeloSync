@@ -139,7 +139,7 @@ def recommend_playlist(
 # --- ユーザー設定 ---
 PLAYLIST_URL = 'https://open.spotify.com/playlist/6rEdUNfBu6BiWgp0PNXIO4?si=1611984fbf574d02'
 user_start_mood_name = 'Relax/Chill'
-user_target_mood_name ='Relax/Chill'
+user_target_mood_name ='Tired/Sad'
 
 # --- メイン実行関数 ---
 def main():
