@@ -120,6 +120,9 @@ fun HomeScreen(
                                 } catch (e: Exception) {
                                     // ネットワークエラーなどの例外処理
                                     Log.e("HomeScreen", "Exception: ${e.message}")
+                                    viewModel.onEmotionSelected(SendEmotion.HAPPY)
+                                    spotifyViewModel.loadPlaylists()
+                                    onNavigateToMain(SendEmotion.HAPPY)
                                 }
                             }
 
