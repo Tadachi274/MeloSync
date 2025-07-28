@@ -30,8 +30,6 @@ app = FastAPI(title="MeloSync Playlist Generator API", version="1.0.0")
 class AllPlaylistsRequest(BaseModel):
     user_id: str  # ユーザーID
     playlist_ids: List[str]  # 複数のプレイリストIDを受け取る
-    create_spotify_playlists: bool = False
-    max_tracks: int = 20
 
 # レスポンスモデル
 class AllPlaylistsResponse(BaseModel):
@@ -428,39 +426,38 @@ async def generate_all_playlists_endpoint(request: AllPlaylistsRequest):
                 if all_playlists[current_mood][target_mood]["success"]:
                     successful_count += 1
 
-        # Spotifyプレイリスト作成の処理
+        # Spotifyプレイリスト作成の処理（デフォルトでtrue、max_tracks=20）
         spotify_playlist_urls = None
-        if request.create_spotify_playlists:
-            try:
-                spotify_playlist_urls = {}
+        try:
+            spotify_playlist_urls = {}
+            
+            # 各感情の組み合わせでプレイリストを作成
+            for current_mood in all_playlists:
+                spotify_playlist_urls[current_mood] = {}
                 
-                # 各感情の組み合わせでプレイリストを作成
-                for current_mood in all_playlists:
-                    spotify_playlist_urls[current_mood] = {}
-                    
-                    for target_mood in all_playlists[current_mood]:
-                        if all_playlists[current_mood][target_mood]["success"]:
-                            # 推薦楽曲のリストを(track_id, score)の形式に変換
-                            recommended_playlist = []
-                            for track in all_playlists[current_mood][target_mood]["playlist"]:
-                                recommended_playlist.append((track["track_id"], track["transition_score"]))
-                            
-                            # ユーザーのSpotifyプレイリストを作成
-                            playlist_url = create_user_spotify_playlist(
-                                user_id=request.user_id,
-                                recommended_playlist=recommended_playlist,
-                                user_start_mood_name=current_mood,
-                                user_target_mood_name=target_mood,
-                                max_tracks=request.max_tracks
-                            )
-                            
-                            spotify_playlist_urls[current_mood][target_mood] = playlist_url
-                        else:
-                            spotify_playlist_urls[current_mood][target_mood] = None
-                            
-            except Exception as e:
-                print(f"Spotifyプレイリスト作成エラー: {e}")
-                spotify_playlist_urls = None
+                for target_mood in all_playlists[current_mood]:
+                    if all_playlists[current_mood][target_mood]["success"]:
+                        # 推薦楽曲のリストを(track_id, score)の形式に変換
+                        recommended_playlist = []
+                        for track in all_playlists[current_mood][target_mood]["playlist"]:
+                            recommended_playlist.append((track["track_id"], track["transition_score"]))
+                        
+                        # ユーザーのSpotifyプレイリストを作成
+                        playlist_url = create_user_spotify_playlist(
+                            user_id=request.user_id,
+                            recommended_playlist=recommended_playlist,
+                            user_start_mood_name=current_mood,
+                            user_target_mood_name=target_mood,
+                            max_tracks=20  # デフォルト値
+                        )
+                        
+                        spotify_playlist_urls[current_mood][target_mood] = playlist_url
+                    else:
+                        spotify_playlist_urls[current_mood][target_mood] = None
+                        
+        except Exception as e:
+            print(f"Spotifyプレイリスト作成エラー: {e}")
+            spotify_playlist_urls = None
 
         return AllPlaylistsResponse(
             success=True,
