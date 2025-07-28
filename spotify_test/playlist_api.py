@@ -26,7 +26,6 @@ app = FastAPI()
 JWT_SECRET_KEY    = os.getenv("JWT_SECRET_KEY")
 ALGORITHM         = "HS256"
 raw_FERNET_KEY = os.getenv("FERNET_KEY")
-print("DEBUG FERNET_KEY", raw_FERNET_KEY)
 FERNET_KEY        = os.getenv("FERNET_KEY").encode('utf-8')
 
 SPOTIFY_CLIENT_ID     = os.getenv("SPOTIFY_CLIENT_ID")
@@ -39,6 +38,8 @@ DB_PORT     = int(os.getenv("DB_PORT", 5432))
 DB_NAME     = os.getenv("DB_NAME")
 DB_USER     = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
+
+print("DEBUG_SPOTIFY_REDIRECT_URI", SPOTIFY_REDIRECT_URI)
 
 
 # --- JWT から user_id を取り出す Dependency ---
@@ -180,27 +181,6 @@ def create_or_update_playlist(
         sp.playlist_add_items(target_id, to_add[i:i+100])
 
     return target_id
-
-
-# --- API エンドポイント ---
-@app.post("/api/spotify/create-playlist")
-async def spotify_create_playlist(
-    user_id: str = Depends(get_current_user)
-):
-    info = get_max_playlist.get_max_playlist_information()
-    source_playlist_id = info.get("id") or ""
-    if not source_playlist_id:
-        raise HTTPException(500, "ソースプレイリストIDが取得できませんでした")
-    
-    new_playlist_name= f"Filtered Playlist - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-    # 1. DB からトークン取得 ＆ 復号
-    access_token, refresh_token, expires_at = fetch_user_tokens(user_id)
-    # 2. Spotipy インスタンス
-    sp = get_spotify(access_token, refresh_token, expires_at)
-    # 3. プレイリスト作成
-    new_id = create_or_update_playlist(sp, source_playlist_id, new_playlist_name)
-    return {"playlist_url": f"https://open.spotify.com/playlist/{new_id}"}
-
 
 # --- 気分移行推薦エンドポイント ---
 @app.post("/api/spotify/mood-transition-playlist")

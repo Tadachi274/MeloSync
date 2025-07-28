@@ -47,6 +47,15 @@ class EmotionRequest(BaseModel):
     chosen_playlists: List[str]
 
 
+#プレイリスト名の除外リスト
+EXCLUDED_PLAYLISTS = {
+    "HAPPY-to-HAPPY", "HAPPY-to-RELAX", "HAPPY-to-ANGRY", "HAPPY-to-SAD",
+    "RELAX-to-HAPPY", "RELAX-to-RELAX", "RELAX-to-ANGRY", "RELAX-to-SAD",
+    "ANGRY-to-HAPPY", "ANGRY-to-RELAX", "ANGRY-to-ANGRY", "ANGRY-to-SAD",
+    "SAD-to-HAPPY", "SAD-to-RELAX", "SAD-to-ANGRY", "SAD-to-SAD"
+}
+
+
 #感情を元にプレイリストのトラックを取得
 @app.post("/api/playlist/emotion")
 async def emotion_playlist_tracks(
@@ -105,6 +114,7 @@ async def user_playlists(
                 "image_url": pl["images"][0]["url"] if pl["images"] else None
             }
             for pl in playlists
+            if pl["name"] not in EXCLUDED_PLAYLISTS  # Exclude specific playlists
         ]
         print(f"DEBUG playlist_info_list: {playlist_info_list}")
         return JSONResponse(content={"data": playlist_info_list})

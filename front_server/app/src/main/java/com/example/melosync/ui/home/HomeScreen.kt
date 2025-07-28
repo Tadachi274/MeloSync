@@ -70,8 +70,9 @@ fun HomeScreen(
                         onClick = {
                             // Update ViewModel and navigate when icon is clicked
                             viewModel.onEmotionSelected(emotion)
-                            spotifyViewModel.setJwt()
-                            spotifyViewModel.loadPlaylists()
+                            spotifyViewModel.setJwt() //JWTセット
+                            spotifyViewModel.loadPlaylists() //playList一覧を取得
+                            spotifyViewModel.classify()//AIモデルを用いたプレイリスト作成
                             onNavigateToMain(emotion)
                         },
                         modifier = Modifier.size(80.dp), // Button size

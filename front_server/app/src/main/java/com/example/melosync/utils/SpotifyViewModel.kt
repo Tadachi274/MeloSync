@@ -209,16 +209,18 @@ class SpotifyViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun classify() {
+        Log.d(TAG,"classify")
         viewModelScope.launch {
             val token = _jwt.value // ★accessTokenからjwtに変更
             if (token == null) {
-                Log.e("SpotifyViewModel", "JWT is not available.")
+                Log.e(TAG, "JWT is not available.")
                 return@launch
             }
             val authHeader = "Bearer $token"
             _isLoading.value = true
             try {
                 val response = backendApiService.doClassify(authHeader)
+                Log.d(TAG,"response:${response.isSuccessful}")
                 if (!response.isSuccessful) {
                     _error.value = "Classify failed: ${response.code()}"
                 }
