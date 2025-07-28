@@ -1,4 +1,19 @@
-spotify_test/.env
+# Android Studio / IntelliJ
+.idea/
+*.iml
+
+# Gradle
+.gradle/
+build/
+
+# ローカル設定ファイル
+local.properties
+
+# macOSシステムファイル
 .DS_Store
-.cache
-auth_server/.env
+
+# その他のビルド生成物
+captures/
+.cxx/
+*.apk
+*.aab
