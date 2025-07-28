@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """
-MeloSync Playlist Generator API サーバー起動スクリプト
+MeloSync Playlist Generator API サーバー起動スクリプト（APIディレクトリ用）
 """
 
 import uvicorn
 import os
+import sys
 from dotenv import load_dotenv
+
+# 親ディレクトリをパスに追加
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 環境変数を読み込み（親ディレクトリの.envファイルを読み込む）
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
@@ -21,7 +25,7 @@ def main():
     
     if not client_id or not client_secret:
         print("⚠️  警告: SPOTIFY_CLIENT_ID または SPOTIFY_CLIENT_SECRET が設定されていません。")
-        print("   .envファイルに以下の設定を追加してください：")
+        print("   backend_server/.envファイルに以下の設定を追加してください：")
         print("   SPOTIFY_CLIENT_ID=your_client_id")
         print("   SPOTIFY_CLIENT_SECRET=your_client_secret")
         print()
@@ -48,4 +52,4 @@ def main():
         print(f"❌ サーバー起動中にエラーが発生しました: {e}")
 
 if __name__ == "__main__":
-    main()
+    main() 
