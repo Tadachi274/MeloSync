@@ -21,13 +21,21 @@ pip install -r requirements.txt
 
 ### 3. APIサーバーの起動
 
+#### 方法1: APIディレクトリから実行
 ```bash
-python run_api_server.py
+cd backend_server/api
+python start_server.py
 ```
 
-または
-
+#### 方法2: backend_serverディレクトリから実行
 ```bash
+cd backend_server
+python start_api.py
+```
+
+#### 方法3: uvicornを直接使用
+```bash
+cd backend_server/api
 uvicorn playlist_api:app --host 0.0.0.0 --port 8000 --reload
 ```
 
@@ -130,6 +138,7 @@ APIサーバーの状態を確認します。
 APIの動作をテストするには：
 
 ```bash
+cd backend_server/api
 python test_api.py
 ```
 

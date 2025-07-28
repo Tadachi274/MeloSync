@@ -8,8 +8,8 @@ from spotipy.oauth2 import SpotifyClientCredentials
 import pandas as pd
 import joblib
 
-# 環境変数を読み込み
-load_dotenv()
+# 環境変数を読み込み（親ディレクトリの.envファイルを読み込む）
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
 
 # FastAPIアプリケーションを作成
 app = FastAPI(title="MeloSync Playlist Generator API", version="1.0.0")
@@ -32,6 +32,10 @@ class PlaylistResponse(BaseModel):
 AVAILABLE_MOODS = ['Angry/Frustrated', 'Happy/Excited', 'Relax/Chill', 'Tired/Sad']
 
 # generate_final_playlist.pyから必要な関数をインポート
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from spotify_utils import get_playlist_tracks
 from recommend import recommend_songs_for_target
 from pre_process_normalize import process_tracks_directly
