@@ -89,17 +89,10 @@ fun MainScreen(
     authViewModel : AuthViewModel,
 ) {
     val TAG ="MainScreen"
-    Log.d(TAG,"MainScreen起動")
     // ViewModelに選択された感情をセット
     LaunchedEffect(key1 = emotion) {
-        try {
-            mainviewModel.setEmotion(emotion)
-            Log.d(TAG,"setEmotion")
-        } catch (e: Exception) {
-            Log.e("LaunchedEffect", "setEmotion failed", e)
-        }
+        mainviewModel.setEmotion(emotion)
     }
-    Log.d(TAG,"LaunchedEffectクリア")
 
     var showMenu by remember { mutableStateOf(false) }
     var showPlaylistDialog by remember { mutableStateOf(false) }
