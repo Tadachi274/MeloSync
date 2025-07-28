@@ -25,4 +25,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "MeloSync"
 include(":app")
- 
+include(":smartwatchapp")
