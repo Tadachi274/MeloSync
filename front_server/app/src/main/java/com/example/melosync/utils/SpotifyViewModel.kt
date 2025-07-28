@@ -219,7 +219,9 @@ class SpotifyViewModel(app: Application) : AndroidViewModel(app) {
             val authHeader = "Bearer $token"
             _isLoading.value = true
             try {
-                val response = backendApiService.doClassify(authHeader)
+                val playlistIds: List<String> = _playlists.value.map { it.playlistId }
+                Log.d(TAG, "Playlist IDs: $playlistIds")
+                val response = backendApiService.doClassify(authHeader,playlistIds)
                 Log.d(TAG,"response:${response.isSuccessful}")
                 if (!response.isSuccessful) {
                     _error.value = "Classify failed: ${response.code()}"
@@ -280,30 +282,28 @@ class SpotifyViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun fetchPlaylistList() {
-        viewModelScope.launch {
-            val token = _jwt.value
-            if (token == null) {
-                Log.e("SpotifyViewModel", "JWT is not available.")
-                return@launch
+    suspend fun fetchPlaylistList() {
+        val token = _jwt.value
+        if (token == null) {
+            Log.e("SpotifyViewModel", "JWT is not available.")
+            return
+        }
+        val authHeader = "Bearer $token"
+        _isLoading.value = true
+        try {
+            val response = backendApiService.getPlaylistList(authHeader)
+            if (response.isSuccessful) {
+                val playlists = response.body()?.data ?: emptyList()
+                val json = Gson().toJson(playlists)
+                Log.d(TAG, "全プレイリストJSON: $json")
+                _playlists.value = playlists
+            } else {
+                _error.value = "Playlist fetch failed: ${response.code()}"
             }
-            val authHeader = "Bearer $token"
-            _isLoading.value = true
-            try {
-                val response = backendApiService.getPlaylistList(authHeader)
-                if (response.isSuccessful) {
-                    val playlists = response.body()?.data ?: emptyList()
-                    val json = Gson().toJson(playlists)
-                    Log.d(TAG, "全プレイリストJSON: $json")
-                    _playlists.value = playlists
-                } else {
-                    _error.value = "Playlist fetch failed: ${response.code()}"
-                }
-            } catch (e: Exception) {
-                _error.value = "Error: ${e.message}"
-            } finally {
-                _isLoading.value = false
-            }
+        } catch (e: Exception) {
+            _error.value = "Error: ${e.message}"
+        } finally {
+            _isLoading.value = false
         }
     }
 
@@ -364,6 +364,7 @@ class SpotifyViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             // TODO: ここで実際にバックエンドAPIを呼び出す
             fetchPlaylistList()
+            classify()
             // 今回はダミーデータを表示
             //_playlists.value = dummyPlaylists
 

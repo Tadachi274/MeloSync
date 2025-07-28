@@ -10,6 +10,7 @@ from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
 import post_playlist_and_tracks as Post_pt
 from fastapi.responses import JSONResponse
+import playlist_api as pa
 
 load_dotenv()  # .envから環境変数をロード
 
@@ -122,3 +123,40 @@ async def user_playlists(
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/classify")
+async def create_mood_transition_playlist(
+    #user_start_mood: str = Query(..., description="現在の気分: 'Angry/Frustrated', 'Happy/Excited', 'Relax/Chill', 'Tired/Sad'"),
+    #user_target_mood: str = Query(..., description="目標の気分: 'Angry/Frustrated', 'Happy/Excited', 'Relax/Chill', 'Tired/Sad'"),
+    # ▼▼▼ 変更点 4: APIパラメータを min_score に変更し、説明と範囲を更新 ▼▼▼
+    #min_score: float = Query(40.0, ge=0, le=100, description="最小移行スコア（0-100）"),
+    user_id: str = Depends(pa.get_current_user)
+    
+):
+    user_start_mood= 'Tired/Sad'  # デフォルト値
+    user_target_mood= 'Happy/Excited'  # デフォルト値
+    min_score=45.0
+    info = pa.get_max_playlist.get_max_playlist_information()
+    source_playlist_id = info.get("id") or ""
+    if not source_playlist_id:
+        raise HTTPException(500, "ソースプレイリストIDが取得できませんでした")
+    
+    new_playlist_name = f"Mood Transition: {user_start_mood} → {user_target_mood} - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    
+    # 1. DB からトークン取得 ＆ 復号
+    access_token, refresh_token, expires_at = pa.fetch_user_tokens(user_id)
+    # 2. Spotipy インスタンス
+    sp = pa.get_spotify(access_token, refresh_token, expires_at)
+    # 3. 気分移行プレイリスト作成
+    # ▼▼▼ 変更点 5: create_or_update_playlist に min_score を渡す ▼▼▼
+    new_id = pa.create_or_update_playlist(
+        sp, source_playlist_id, new_playlist_name,
+        user_start_mood, user_target_mood, min_score
+    )
+    
+    # ▼▼▼ 変更点 6: レスポンスの内容を min_score に更新 ▼▼▼
+    return {
+        "playlist_url": f"https://open.spotify.com/playlist/{new_id}",
+        "mood_transition": f"{user_start_mood} → {user_target_mood}",
+        "min_score": min_score
+    }
