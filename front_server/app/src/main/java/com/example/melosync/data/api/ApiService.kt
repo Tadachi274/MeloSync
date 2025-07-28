@@ -23,7 +23,8 @@ interface ApiService {
      */
     @POST("api/classify")
     suspend fun doClassify(
-        @Header("Authorization") token: String
+        @Header("Authorization") token: String,
+        @Query("playlistIDs") playlistIDs: List<String>
     ): Response<Unit> // 返り値がない場合はUnitを指定
 
     /**

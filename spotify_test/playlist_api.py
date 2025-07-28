@@ -2,16 +2,9 @@
 import os
 import sys
 from dotenv import load_dotenv
-
-
 dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
-
 print(f"DEBUG: Attempting to load .env file from: {dotenv_path}")
-
 load_dotenv(dotenv_path=dotenv_path)
-
-# --- ↑↑↑ 修改结束 ↑↑↑ ---
-
 # --- 后续的其他 import ---
 from fastapi import FastAPI, Depends, Header, HTTPException, Query
 from jose import jwt, JWTError
@@ -20,20 +13,13 @@ from cryptography.fernet import Fernet
 from datetime import datetime, timezone
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
-
-# 现在这个 import 就不会出错了
 import get_max_playlist
-
 # backend_serverディレクトリをパスに追加
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend_server'))
-
+backend_server_path = os.path.join(os.path.dirname(__file__), '..', 'backend_server')
+sys.path.insert(0, backend_server_path)
 # generate_final_playlistから関数をインポート
 from generate_final_playlist import recommend_playlist
-
-load_dotenv()  # .envから環境変数をロード
-
 app = FastAPI()
-
 # --- Env ---
 JWT_SECRET_KEY    = os.getenv("JWT_SECRET_KEY")
 ALGORITHM         = "HS256"
@@ -117,7 +103,7 @@ def create_or_update_playlist(
     new_playlist_name: str,
     user_start_mood: str = None,
     user_target_mood: str = None,
-    min_probability: float = 0.4
+    min_score: float = 40.0
 ) -> str:
     """
     指定された条件に基づいてSpotifyプレイリストを作成または更新します。
@@ -138,7 +124,7 @@ def create_or_update_playlist(
         target_playlist_id = new_playlist["id"]
         print(f"新しいプレイリスト '{new_playlist_name}' (ID: {target_playlist_id}) を作成しました。")
 
-    
+
     uris_to_add = []
     # --- ステップ2: 推薦ロジックを呼び出し、曲のIDリストを取得 ---
     # 気分移行が指定されている場合、generate_final_playlistを呼び出す
@@ -157,17 +143,26 @@ def create_or_update_playlist(
         
         if recommended_playlist:
             # ランキングリストから track_id を抽出し、Spotify APIが要求するURI形式に変換します。
-            for track_id, probability in recommended_playlist:
-                # 移行確率(score)が設定した閾値以上の場合のみリストに追加
-                if probability >= min_probability:
+            # ▼▼▼ 新增的打印排名代码 ▼▼▼
+            print("\n" + "="*60)
+            print(f"「{user_start_mood}」から「{user_target_mood}」への推薦ランキング (上位20曲)")
+            print("="*60)
+            # 为了避免终端被刷屏，只显示排名前20的歌曲
+            for i, (track_id, score) in enumerate(recommended_playlist[:50]):
+                print(f"{i+1:2d}. Track ID: {track_id:<25} | Score: {score:6.2f}")
+            print("="*60 + "\n")
+            # ▲▲▲ 打印代码结束 ▲▲▲
+            # ▼▼▼ 変更点 2: 変数名を probability から score に変更し、min_score でフィルタリング ▼▼▼
+            for track_id, score in recommended_playlist:
+                if score >= min_score:
                     uris_to_add.append(f"spotify:track:{track_id}")
             
-            print(f"情報: 移行確率が {min_probability:.1%} 以上の楽曲 {len(uris_to_add)} 曲を処理対象にします。")
+            # ▼▼▼ 変更点 3: ログメッセージを score ベースに更新 ▼▼▼
+            print(f"情報: 移行スコアが {min_score} 以上の楽曲 {len(uris_to_add)} 曲を処理対象にします。")
         else:
             print("警告: 推薦リストの生成に失敗しました。プレイリストは空のままです。")
-            # 推薦に失敗した場合、リストは空のままステップ3に進みます。
             pass
-            
+
     else:
         # (フォールバック処理) 気分移行が指定されない場合、元コードのpopularityフィルターを適用
         print("情報: 気分移行が指定されていないため、popularity > 50 の曲をフィルタリングします。")
@@ -181,14 +176,14 @@ def create_or_update_playlist(
             track = sp.track(uri)
             if track.get("popularity", 0) > 50:
                 uris_to_add.append(uri)
-    
+
     # --- ステップ3: 抽出した曲をプレイリストに追加 ---
     if uris_to_add:
         # プレイリストの中身を完全に置き換える場合はこちらが効率的です。
         # まずは100件ずつ追加します（APIの制限のため）
         for i in range(0, len(uris_to_add), 100):
             sp.playlist_add_items(target_playlist_id, uris_to_add[i:i+100])
-        
+
         print(f"情報: {len(uris_to_add)} 曲をプレイリスト '{new_playlist_name}' に追加しました。")
 
     else:
@@ -220,11 +215,15 @@ async def spotify_create_playlist(
 # --- 気分移行推薦エンドポイント ---
 @app.post("/api/spotify/mood-transition-playlist")
 async def create_mood_transition_playlist(
-    user_start_mood: str = Query(..., description="現在の気分: 'Angry/Frustrated', 'Happy/Excited', 'Relax/Chill', 'Tired/Sad'"),
-    user_target_mood: str = Query(..., description="目標の気分: 'Angry/Frustrated', 'Happy/Excited', 'Relax/Chill', 'Tired/Sad'"),
-    min_probability: float = Query(0.4, description="最小移行確率（0.0-1.0）"),
+    #user_start_mood: str = Query(..., description="現在の気分: 'Angry/Frustrated', 'Happy/Excited', 'Relax/Chill', 'Tired/Sad'"),
+    #user_target_mood: str = Query(..., description="目標の気分: 'Angry/Frustrated', 'Happy/Excited', 'Relax/Chill', 'Tired/Sad'"),
+    # ▼▼▼ 変更点 4: APIパラメータを min_score に変更し、説明と範囲を更新 ▼▼▼
+    #min_score: float = Query(40.0, ge=0, le=100, description="最小移行スコア（0-100）"),
     user_id: str = Depends(get_current_user)
 ):
+    user_start_mood= 'Tired/Sad'  # デフォルト値
+    user_target_mood= 'Happy/Excited'  # デフォルト値
+    min_score=45.0
     info = get_max_playlist.get_max_playlist_information()
     source_playlist_id = info.get("id") or ""
     if not source_playlist_id:
@@ -237,13 +236,15 @@ async def create_mood_transition_playlist(
     # 2. Spotipy インスタンス
     sp = get_spotify(access_token, refresh_token, expires_at)
     # 3. 気分移行プレイリスト作成
+    # ▼▼▼ 変更点 5: create_or_update_playlist に min_score を渡す ▼▼▼
     new_id = create_or_update_playlist(
         sp, source_playlist_id, new_playlist_name,
-        user_start_mood, user_target_mood, min_probability
+        user_start_mood, user_target_mood, min_score
     )
     
+    # ▼▼▼ 変更点 6: レスポンスの内容を min_score に更新 ▼▼▼
     return {
         "playlist_url": f"https://open.spotify.com/playlist/{new_id}",
         "mood_transition": f"{user_start_mood} → {user_target_mood}",
-        "min_probability": min_probability
+        "min_score": min_score
     }

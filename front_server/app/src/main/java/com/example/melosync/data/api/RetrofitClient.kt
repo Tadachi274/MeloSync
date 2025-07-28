@@ -12,7 +12,7 @@ object RetrofitClient {
 
     // 1. あなたのバックエンドサーバーのURL
     private const val BACKEND_BASE_URL = "http://10.0.2.2:8003/" // Androidエミュレータ用のIP
-
+    private const val BACKEND_BASE_URL_AI = "http://10.0.2.2:8004/"
     // 2. Spotify Web APIのURL
     private const val SPOTIFY_API_BASE_URL = "https://api.spotify.com/"
 
@@ -27,6 +27,15 @@ object RetrofitClient {
     val backendApi: ApiService by lazy {
         Retrofit.Builder()
             .baseUrl(BACKEND_BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ApiService::class.java)
+    }
+
+    val backendApiAI: ApiService by lazy {
+        Retrofit.Builder()
+            .baseUrl(BACKEND_BASE_URL_AI)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
