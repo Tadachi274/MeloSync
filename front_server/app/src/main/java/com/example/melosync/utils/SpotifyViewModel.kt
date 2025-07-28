@@ -12,6 +12,7 @@ import com.example.melosync.data.api.Playlist
 import com.example.melosync.data.api.TrackAPI
 import com.example.melosync.data.SendEmotion
 import android.graphics.Bitmap
+import com.example.melosync.data.Emotion
 import com.example.melosync.data.api.CurrentlyPlayingContext
 import com.example.melosync.data.api.PlayRequest
 import com.spotify.android.appremote.api.ConnectionParams
@@ -257,6 +258,7 @@ class SpotifyViewModel : ViewModel() {
                     }
                 } else {
                     val errorBody = response.errorBody()?.string()
+                    _playlists.value = dummyPlaylists
                     _error.value = "Playlist fetch failed: ${response.code()}"
                     Log.e("SpotifyViewModel", "API Error: ${response.code()} $errorBody")
                 }
@@ -349,9 +351,15 @@ class SpotifyViewModel : ViewModel() {
         // viewModelScopeでコルーチンを開始
         viewModelScope.launch {
             // TODO: ここで実際にバックエンドAPIを呼び出す
-//            fetchPlaylistList()
+            try{
+                fetchPlaylistList()
+            } catch (e: Exception) {
+                // ネットワークエラーなどの例外処理
+                Log.e("MainViewModel", "Exception(laadPlaylists): ${e.message}")
+                _playlists.value = dummyPlaylists
+
+            }
             // 今回はダミーデータを表示
-            _playlists.value = dummyPlaylists
 
         }
     }
@@ -362,16 +370,27 @@ class SpotifyViewModel : ViewModel() {
         return activePlaylistIds
     }
 
-    fun loadQueue() {
+    fun loadQueue(firstEmotion :SendEmotion, currentEmotion: SendEmotion) {
         viewModelScope.launch {
-            // TODO: ここで実際にバックエンドAPIを呼び出す
-            val chosenPlaylists = abstractionChosenPlaylists()
-//            fetchEmotionPlaylist(SendEmotion.HAPPY, SendEmotion.RELAX, chosenPlaylists = chosenPlaylists)
-            // 今回はダミーデータを表示
-            _playbackQueue.value = dummyTrackLists
-            play("spotify:track:${_playbackQueue.value[0].trackId}")
+            try {
+                // ここで実際にバックエンドAPIを呼び出す
+                val chosenPlaylists = abstractionChosenPlaylists()
+                fetchEmotionPlaylist(
+                    firstEmotion,
+                    currentEmotion,
+                    chosenPlaylists = chosenPlaylists
+                )
+                // 今回はダミーデータを表示
+
+                play("spotify:track:${_playbackQueue.value[0].trackId}")
+            } catch (e:Exception) {
+                Log.e("MainViewModel", "Exception(loadQueue): ${e.message}")
+                _playbackQueue.value = dummyTrackLists
+            }
+
+            }
         }
-    }
+
 
     /**
      * プレイリストの選択状態をトグルする
