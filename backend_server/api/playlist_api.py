@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException,Depends, Header, Query
 from pydantic import BaseModel
 from typing import List, Tuple, Optional
 import os
@@ -10,6 +10,8 @@ import joblib
 import psycopg2
 from cryptography.fernet import Fernet
 from datetime import datetime, timezone
+from jose import jwt, JWTError
+from typing import Annotated
 
 # データベース設定
 DB_HOST     = os.getenv("DB_HOST")
@@ -18,6 +20,8 @@ DB_NAME     = os.getenv("DB_NAME")
 DB_USER     = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 FERNET_KEY  = os.getenv("FERNET_KEY")
+JWT_SECRET_KEY    = os.getenv("JWT_SECRET_KEY")
+ALGORITHM         = "HS256"
 
 
 # 環境変数を読み込み（親ディレクトリの.envファイルを読み込む）
@@ -50,6 +54,19 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from spotify_utils import get_playlist_tracks
 from recommend import recommend_songs_for_target
 from pre_process_normalize import process_tracks_directly
+
+def get_current_user(authorization: str = Header(..., alias="Authorization")) -> str:
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        raise HTTPException(401, "Authorization header malformed")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("user_id")
+        if not user_id:
+            raise HTTPException(401, "user_id claim missing")
+        return user_id
+    except JWTError as e:
+        raise HTTPException(401, f"Token validation failed: {e}")
 
 def normalize_scores(
     recommendations: List[Tuple[str, float]]
@@ -216,7 +233,7 @@ def fetch_user_tokens(user_id: str):
     refresh_token = f.decrypt(enc_refresh.encode()).decode("utf-8")
     
     # トークンの有効期限をチェック
-    if expires_at and expires_at < datetime.now(timezone.utc):
+    if expires_at and expires_at <int(datetime.now(timezone.utc).timestamp()):
         # トークンが期限切れの場合、リフレッシュする
         client_id = os.getenv("SPOTIFY_CLIENT_ID")
         client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
@@ -393,30 +410,34 @@ async def root():
         }
     }
 
-@app.post("/generate-all-playlists", response_model=AllPlaylistsResponse)
-async def generate_all_playlists_endpoint(request: AllPlaylistsRequest):
+@app.post("/api/classify", response_model=AllPlaylistsResponse)
+async def generate_all_playlists_endpoint(
+    playlistIDs: Annotated[List[str], Query(..., alias="playlistIDs")],
+    user_id: str = Depends(get_current_user)
+):
     """
     複数のプレイリストIDから楽曲を統合して、4つの感情状態の組み合わせで16個のプレイリストを一括生成するエンドポイント
     """
     try:
         # 入力値の検証
-        if not request.playlist_ids or len(request.playlist_ids) == 0:
+        if not playlistIDs or len(playlistIDs) == 0:
             raise HTTPException(
                 status_code=400, 
                 detail="プレイリストIDのリストを指定してください"
             )
         
         # 各プレイリストIDの検証
-        for playlist_id in request.playlist_ids:
+        for playlist_id in playlistIDs:
             if not playlist_id or len(playlist_id) < 10:
                 raise HTTPException(
                     status_code=400, 
                     detail=f"無効なプレイリストIDが含まれています: {playlist_id}"
                 )
-
+        print(f"playlistIDs: {playlistIDs} のプレイリストIDを受け取りました。")
+        
         # 全プレイリスト生成
         all_playlists = generate_all_playlists_from_multiple_sources(
-            playlist_ids=request.playlist_ids
+            playlist_ids=playlistIDs
         )
         
         # 成功したプレイリスト数をカウント
@@ -446,7 +467,7 @@ async def generate_all_playlists_endpoint(request: AllPlaylistsRequest):
                         
                         # ユーザーのSpotifyプレイリストを作成
                         playlist_url = create_user_spotify_playlist(
-                            user_id=request.user_id,
+                            user_id=user_id,
                             recommended_playlist=recommended_playlist,
                             user_start_mood_name=current_mood,
                             user_target_mood_name=target_mood,
@@ -463,7 +484,7 @@ async def generate_all_playlists_endpoint(request: AllPlaylistsRequest):
 
         return AllPlaylistsResponse(
             success=True,
-            message=f"{len(request.playlist_ids)}個のプレイリストから楽曲を統合して16個のプレイリストを生成しました。成功: {successful_count}/{total_count}",
+            message=f"{len(playlistIDs)}個のプレイリストから楽曲を統合して16個のプレイリストを生成しました。成功: {successful_count}/{total_count}",
             playlists=all_playlists,
             spotify_playlist_urls=spotify_playlist_urls
         )
