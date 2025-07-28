@@ -44,7 +44,7 @@ class SpotifyViewModel(app: Application) : AndroidViewModel(app) {
 
     // バックエンドとの通信用
     private val backendApiService: ApiService = RetrofitClient.backendApi
-
+    private val backendApiServiceAI: ApiService = RetrofitClient.backendApiAI
     // Spotify Web APIとの通信用
     private val spotifyApiService: ApiService = RetrofitClient.spotifyApi
 
@@ -221,7 +221,7 @@ class SpotifyViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val playlistIds: List<String> = _playlists.value.map { it.playlistId }
                 Log.d(TAG, "Playlist IDs: $playlistIds")
-                val response = backendApiService.doClassify(authHeader,playlistIds)
+                val response = backendApiServiceAI.doClassify(authHeader,playlistIds)
                 Log.d(TAG,"response:${response.isSuccessful}")
                 if (!response.isSuccessful) {
                     _error.value = "Classify failed: ${response.code()}"
