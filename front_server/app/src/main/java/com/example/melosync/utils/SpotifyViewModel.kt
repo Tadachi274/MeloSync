@@ -378,14 +378,17 @@ class SpotifyViewModel(app: Application) : AndroidViewModel(app) {
         return activePlaylistIds
     }
 
-    fun loadQueue() {
+    fun loadQueue(firstEmotion :SendEmotion, currentEmotion: SendEmotion) {
         viewModelScope.launch {
             Log.d(TAG,"LoadQueue")
             // TODO: ここで実際にバックエンドAPIを呼び出す
             val chosenPlaylists = abstractionChosenPlaylists()
             Log.d(TAG,"loadQueue.chosenPlaylists:${chosenPlaylists}")
-            fetchEmotionPlaylist(SendEmotion.HAPPY, SendEmotion.HAPPY, chosenPlaylists = chosenPlaylists)
-            // 今回はダミーデータを表示
+            fetchEmotionPlaylist(
+                firstEmotion,
+                currentEmotion,
+                chosenPlaylists
+            )            // 今回はダミーデータを表示
             //_playbackQueue.value = dummyTrackLists
             if (_playbackQueue.value.isNotEmpty()) {
                 play("spotify:track:${_playbackQueue.value[0].trackId}")

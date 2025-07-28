@@ -103,6 +103,8 @@ fun MainScreen(
     val firstEmotionCoordinate by mainviewModel.firstEmotionCoordinate.collectAsStateWithLifecycle()
     //    val currentEmotion by mainviewModel.currentEmotion.collectAsStateWithLifecycle()
     val pointColor by mainviewModel.pointColor.collectAsStateWithLifecycle()
+    val firstEmotion by mainviewModel.firstEmotion.collectAsStateWithLifecycle()
+    val currentEmotion by mainviewModel.currentEmotion.collectAsStateWithLifecycle()
     // SpotifyViewModelからの状態
     val appRemote by spotifyViewModel.appRemote.collectAsState()
     val playerState by spotifyViewModel.playerState.collectAsState()
@@ -270,7 +272,7 @@ fun MainScreen(
                         Log.d("Main","Click更新")
 //                        Toast.makeText(context, "プレイリスト更新は後で実装します", Toast.LENGTH_SHORT).show()
 //                        spotifyViewModel.play("spotify:track:7v6DqVMaljJDUXYavMY4kf")
-                        spotifyViewModel.loadQueue()
+                        spotifyViewModel.loadQueue(firstEmotion, currentEmotion)
 //                        spotifyViewModel.play("spotify:track:${playbackQueue[0].trackId}")
                     },
                     colors = ButtonDefaults.buttonColors(
