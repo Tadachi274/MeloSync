@@ -113,6 +113,7 @@ fun MainScreen(
         val response = AuthorizationClient.getResponse(result.resultCode, result.data)
         spotifyViewModel.handleAppRemoteAuthResponse(response, context)
     }
+    spotifyViewModel.connectToAppRemote(context, authLauncher)
     if (showPlaylistDialog) {
 //        PlaylistSelectionDialog(
         SettingScreen(
