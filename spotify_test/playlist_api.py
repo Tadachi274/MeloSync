@@ -1,5 +1,11 @@
 # playlist_api.py
 import os
+import sys
+from dotenv import load_dotenv
+dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+print(f"DEBUG: Attempting to load .env file from: {dotenv_path}")
+load_dotenv(dotenv_path=dotenv_path)
+# --- 后续的其他 import ---
 from fastapi import FastAPI, Depends, Header, HTTPException, Query
 from jose import jwt, JWTError
 import psycopg2
@@ -7,25 +13,18 @@ from cryptography.fernet import Fernet
 from datetime import datetime, timezone
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
-from dotenv import load_dotenv
 import get_max_playlist
-import sys
-import os
-
 # backend_serverディレクトリをパスに追加
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend_server'))
-
+backend_server_path = os.path.join(os.path.dirname(__file__), '..', 'backend_server')
+sys.path.insert(0, backend_server_path)
 # generate_final_playlistから関数をインポート
 from generate_final_playlist import recommend_playlist
-
-load_dotenv()  # .envから環境変数をロード
-
 app = FastAPI()
-
 # --- Env ---
 JWT_SECRET_KEY    = os.getenv("JWT_SECRET_KEY")
 ALGORITHM         = "HS256"
 raw_FERNET_KEY = os.getenv("FERNET_KEY")
+print("DEBUG FERNET_KEY", raw_FERNET_KEY)
 FERNET_KEY        = os.getenv("FERNET_KEY").encode('utf-8')
 
 SPOTIFY_CLIENT_ID     = os.getenv("SPOTIFY_CLIENT_ID")
@@ -38,8 +37,6 @@ DB_PORT     = int(os.getenv("DB_PORT", 5432))
 DB_NAME     = os.getenv("DB_NAME")
 DB_USER     = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
-
-print("DEBUG_SPOTIFY_REDIRECT_URI", SPOTIFY_REDIRECT_URI)
 
 
 # --- JWT から user_id を取り出す Dependency ---
@@ -99,38 +96,45 @@ def get_spotify(access_token: str, refresh_token: str, expires_at: int):
     return spotipy.Spotify(auth=access_token)
 
 
-# --- プレイリスト作成／更新処理（移行確率フィルタリング対応） ---
+# --- プレイリスト作成／更新処理（リファクタリング版） ---
 def create_or_update_playlist(
     sp: spotipy.Spotify,
     source_playlist_id: str,
     new_playlist_name: str,
     user_start_mood: str = None,
     user_target_mood: str = None,
-    min_probability: float = 0.4
+    min_score: float = 40.0
 ) -> str:
+    """
+    指定された条件に基づいてSpotifyプレイリストを作成または更新します。
+    気分移行が指定された場合、generate_final_playlistから推薦を取得して歌单を生成します。
+    """
     me = sp.me()["id"]
-    # 既存プレイリスト検索
+
+    # --- ステップ1: 新しいプレイリストを作成、または同名の既存プレイリストを探す ---
+    target_playlist_id = None
     for pl in sp.current_user_playlists()["items"]:
         if pl["name"] == new_playlist_name:
-            target_id = pl["id"]
+            target_playlist_id = pl["id"]
+            print(f"既存のプレイリスト '{new_playlist_name}' (ID: {target_playlist_id}) を更新します。")
             break
     else:
-        target_id = sp.user_playlist_create(me, new_playlist_name, public=True)["id"]
+        # 見つからなければ新しく作成
+        new_playlist = sp.user_playlist_create(me, new_playlist_name, public=True)
+        target_playlist_id = new_playlist["id"]
+        print(f"新しいプレイリスト '{new_playlist_name}' (ID: {target_playlist_id}) を作成しました。")
 
-    # 元プレイリストのトラックを全部取得
-    uris = []
-    results = sp.playlist_items(source_playlist_id)
-    uris += [item["track"]["uri"] for item in results["items"]]
-    while results["next"]:
-        results = sp.next(results)
-        uris += [item["track"]["uri"] for item in results["items"]]
-
-    # 気分移行推薦が指定されている場合は、移行確率でフィルタリング
+    
+    uris_to_add = []
+    # --- ステップ2: 推薦ロジックを呼び出し、曲のIDリストを取得 ---
+    # 気分移行が指定されている場合、generate_final_playlistを呼び出す
     if user_start_mood and user_target_mood:
-        # プレイリストURLを作成
+        print("情報: generate_final_playlist から推薦リストを生成中...")
         playlist_url = f"https://open.spotify.com/playlist/{source_playlist_id}"
         
-        # 推薦楽曲を取得
+        # ★★★ ここが核心部分です ★★★
+        # generate_final_playlist.py の recommend_playlist を呼び出し、ランキングリストを取得します。
+        # recommended_playlist の形式: [(track_id, score), (track_id, score), ...]
         recommended_playlist = recommend_playlist(
             playlist_url=playlist_url,
             user_start_mood_name=user_start_mood,
@@ -138,58 +142,88 @@ def create_or_update_playlist(
         )
         
         if recommended_playlist:
-            # 移行確率が閾値以上の楽曲のみをフィルタリング
-            filtered_uris = []
-            for track_id, probability in recommended_playlist:
-                if probability >= min_probability:
-                    # track_idをURIに変換
-                    track_uri = f"spotify:track:{track_id}"
-                    if track_uri in uris:  # 元プレイリストに存在する場合のみ
-                        filtered_uris.append(track_uri)
+            # ランキングリストから track_id を抽出し、Spotify APIが要求するURI形式に変換します。
+            # ▼▼▼ 新增的打印排名代码 ▼▼▼
+            print("\n" + "="*60)
+            print(f"「{user_start_mood}」から「{user_target_mood}」への推薦ランキング (上位20曲)")
+            print("="*60)
+            # 为了避免终端被刷屏，只显示排名前20的歌曲
+            for i, (track_id, score) in enumerate(recommended_playlist[:50]):
+                print(f"{i+1:2d}. Track ID: {track_id:<25} | Score: {score:6.2f}")
+            print("="*60 + "\n")
+            # ▲▲▲ 打印代码结束 ▲▲▲
+            # ▼▼▼ 変更点 2: 変数名を probability から score に変更し、min_score でフィルタリング ▼▼▼
+            for track_id, score in recommended_playlist:
+                if score >= min_score:
+                    uris_to_add.append(f"spotify:track:{track_id}")
             
-            print(f"移行確率{min_probability:.1%}以上の楽曲: {len(filtered_uris)}曲")
-            uris = filtered_uris
+            # ▼▼▼ 変更点 3: ログメッセージを score ベースに更新 ▼▼▼
+            print(f"情報: 移行スコアが {min_score} 以上の楽曲 {len(uris_to_add)} 曲を処理対象にします。")
         else:
-            print("推薦楽曲の取得に失敗しました。popularityフィルタリングを使用します。")
-            # 推薦に失敗した場合は従来のpopularityフィルタリングを使用
-            filtered = []
-            for uri in uris:
-                track = sp.track(uri)
-                if track.get("popularity", 0) > 50:
-                    filtered.append(uri)
-            uris = filtered
+            print("警告: 推薦リストの生成に失敗しました。プレイリストは空のままです。")
+            pass
+            
     else:
-        # 従来のpopularityフィルタリング
-        filtered = []
-        for uri in uris:
+        # (フォールバック処理) 気分移行が指定されない場合、元コードのpopularityフィルターを適用
+        print("情報: 気分移行が指定されていないため、popularity > 50 の曲をフィルタリングします。")
+        results = sp.playlist_items(source_playlist_id)
+        source_uris = [item["track"]["uri"] for item in results["items"] if item.get("track")]
+        while results["next"]:
+            results = sp.next(results)
+            source_uris += [item["track"]["uri"] for item in results["items"] if item.get("track")]
+
+        for uri in source_uris:
             track = sp.track(uri)
             if track.get("popularity", 0) > 50:
-                filtered.append(uri)
-        uris = filtered
+                uris_to_add.append(uri)
+    
+    # --- ステップ3: 抽出した曲をプレイリストに追加 ---
+    if uris_to_add:
+        # プレイリストの中身を完全に置き換える場合はこちらが効率的です。
+        # まずは100件ずつ追加します（APIの制限のため）
+        for i in range(0, len(uris_to_add), 100):
+            sp.playlist_add_items(target_playlist_id, uris_to_add[i:i+100])
+        
+        print(f"情報: {len(uris_to_add)} 曲をプレイリスト '{new_playlist_name}' に追加しました。")
 
-    # 既存プレイリストの中身を取得して重複を除外
-    existing = []
-    res2 = sp.playlist_items(target_id)
-    existing += [i["track"]["uri"] for i in res2["items"]]
-    while res2["next"]:
-        res2 = sp.next(res2)
-        existing += [i["track"]["uri"] for i in res2["items"]]
+    else:
+        print("情報: 追加する曲がありませんでした。")
 
-    to_add = [u for u in uris if u not in existing]
-    # 100件ずつ追加
-    for i in range(0, len(to_add), 100):
-        sp.playlist_add_items(target_id, to_add[i:i+100])
+    return target_playlist_id
 
-    return target_id
+
+# --- API エンドポイント ---
+@app.post("/api/spotify/create-playlist")
+async def spotify_create_playlist(
+    user_id: str = Depends(get_current_user)
+):
+    info = get_max_playlist.get_max_playlist_information()
+    source_playlist_id = info.get("id") or ""
+    if not source_playlist_id:
+        raise HTTPException(500, "ソースプレイリストIDが取得できませんでした")
+    
+    new_playlist_name= f"Filtered Playlist - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    # 1. DB からトークン取得 ＆ 復号
+    access_token, refresh_token, expires_at = fetch_user_tokens(user_id)
+    # 2. Spotipy インスタンス
+    sp = get_spotify(access_token, refresh_token, expires_at)
+    # 3. プレイリスト作成
+    new_id = create_or_update_playlist(sp, source_playlist_id, new_playlist_name)
+    return {"playlist_url": f"https://open.spotify.com/playlist/{new_id}"}
+
 
 # --- 気分移行推薦エンドポイント ---
 @app.post("/api/spotify/mood-transition-playlist")
 async def create_mood_transition_playlist(
-    user_start_mood: str = Query(..., description="現在の気分: 'Angry/Frustrated', 'Happy/Excited', 'Relax/Chill', 'Tired/Sad'"),
-    user_target_mood: str = Query(..., description="目標の気分: 'Angry/Frustrated', 'Happy/Excited', 'Relax/Chill', 'Tired/Sad'"),
-    min_probability: float = Query(0.4, description="最小移行確率（0.0-1.0）"),
+    #user_start_mood: str = Query(..., description="現在の気分: 'Angry/Frustrated', 'Happy/Excited', 'Relax/Chill', 'Tired/Sad'"),
+    #user_target_mood: str = Query(..., description="目標の気分: 'Angry/Frustrated', 'Happy/Excited', 'Relax/Chill', 'Tired/Sad'"),
+    # ▼▼▼ 変更点 4: APIパラメータを min_score に変更し、説明と範囲を更新 ▼▼▼
+    #min_score: float = Query(40.0, ge=0, le=100, description="最小移行スコア（0-100）"),
     user_id: str = Depends(get_current_user)
 ):
+    user_start_mood= 'Tired/Sad'  # デフォルト値
+    user_target_mood= 'Happy/Excited'  # デフォルト値
+    min_score=45.0
     info = get_max_playlist.get_max_playlist_information()
     source_playlist_id = info.get("id") or ""
     if not source_playlist_id:
@@ -202,13 +236,15 @@ async def create_mood_transition_playlist(
     # 2. Spotipy インスタンス
     sp = get_spotify(access_token, refresh_token, expires_at)
     # 3. 気分移行プレイリスト作成
+    # ▼▼▼ 変更点 5: create_or_update_playlist に min_score を渡す ▼▼▼
     new_id = create_or_update_playlist(
         sp, source_playlist_id, new_playlist_name,
-        user_start_mood, user_target_mood, min_probability
+        user_start_mood, user_target_mood, min_score
     )
     
+    # ▼▼▼ 変更点 6: レスポンスの内容を min_score に更新 ▼▼▼
     return {
         "playlist_url": f"https://open.spotify.com/playlist/{new_id}",
         "mood_transition": f"{user_start_mood} → {user_target_mood}",
-        "min_probability": min_probability
+        "min_score": min_score
     }
