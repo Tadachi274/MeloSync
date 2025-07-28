@@ -268,7 +268,7 @@ def create_user_spotify_playlist(
     max_tracks: int = 20
 ) -> Optional[str]:
     """
-    ユーザーのSpotifyアカウントにプレイリストを作成する関数
+    ユーザーのSpotifyアカウントにプレイリストを作成または更新する関数
     
     Args:
         user_id: ユーザーID
@@ -278,7 +278,7 @@ def create_user_spotify_playlist(
         max_tracks: プレイリストに追加する最大楽曲数
         
     Returns:
-        str: 作成されたプレイリストのURL、失敗時はNone
+        str: 作成または更新されたプレイリストのURL、失敗時はNone
     """
     try:
         # ユーザーのトークンを取得
@@ -306,18 +306,55 @@ def create_user_spotify_playlist(
         playlist_name = f"{start_mood_short}-to-{target_mood_short}"
         playlist_description = f"MeloSync generated playlist: Transition from {user_start_mood_name} to {user_target_mood_name}"
         
-        print(f"情報: プレイリスト '{playlist_name}' を作成中...")
+        # 既存のプレイリストを検索
+        existing_playlist = None
+        offset = 0
+        limit = 50
         
-        # プレイリストを作成
-        playlist = sp.user_playlist_create(
-            user=user_id_spotify,
-            name=playlist_name,
-            description=playlist_description,
-            public=True
-        )
+        while True:
+            playlists = sp.current_user_playlists(limit=limit, offset=offset)
+            if not playlists['items']:
+                break
+                
+            for playlist in playlists['items']:
+                if playlist['name'] == playlist_name:
+                    existing_playlist = playlist
+                    break
+            
+            if existing_playlist:
+                break
+                
+            offset += limit
+            if offset >= playlists['total']:
+                break
         
-        playlist_id = playlist['id']
-        playlist_url = playlist['external_urls']['spotify']
+        playlist_id = None
+        playlist_url = None
+        
+        if existing_playlist:
+            # 既存のプレイリストを更新
+            playlist_id = existing_playlist['id']
+            playlist_url = existing_playlist['external_urls']['spotify']
+            print(f"情報: 既存のプレイリスト '{playlist_name}' を更新中...")
+            
+            # 既存の楽曲をすべて削除
+            current_tracks = sp.playlist_tracks(playlist_id, fields='items(track(id))')
+            if current_tracks['items']:
+                track_ids_to_remove = [item['track']['id'] for item in current_tracks['items'] if item['track']]
+                if track_ids_to_remove:
+                    sp.playlist_remove_all_occurrences_of_items(playlist_id, track_ids_to_remove)
+                    print(f"情報: 既存の {len(track_ids_to_remove)} 曲を削除しました。")
+        else:
+            # 新しいプレイリストを作成
+            print(f"情報: 新しいプレイリスト '{playlist_name}' を作成中...")
+            playlist = sp.user_playlist_create(
+                user=user_id_spotify,
+                name=playlist_name,
+                description=playlist_description,
+                public=True
+            )
+            playlist_id = playlist['id']
+            playlist_url = playlist['external_urls']['spotify']
         
         # 推薦された楽曲をプレイリストに追加
         track_ids = [track_id for track_id, _ in recommended_playlist[:max_tracks]]
@@ -328,7 +365,8 @@ def create_user_spotify_playlist(
             # 楽曲をプレイリストに追加
             sp.playlist_add_items(playlist_id, track_ids)
             
-            print(f"✅ プレイリストが正常に作成されました！")
+            action = "更新" if existing_playlist else "作成"
+            print(f"✅ プレイリストが正常に{action}されました！")
             print(f"   プレイリスト名: {playlist_name}")
             print(f"   楽曲数: {len(track_ids)}")
             print(f"   プレイリストURL: {playlist_url}")
@@ -339,7 +377,7 @@ def create_user_spotify_playlist(
             return None
             
     except Exception as e:
-        print(f"エラー: プレイリスト作成中にエラーが発生しました: {e}")
+        print(f"エラー: プレイリスト作成/更新中にエラーが発生しました: {e}")
         return None
 
 @app.get("/")
