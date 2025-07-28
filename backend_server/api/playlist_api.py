@@ -161,10 +161,12 @@ def generate_all_playlists_from_multiple_sources(
                     )
                     
                     final_scored_playlist = normalize_scores(recommended_playlist_with_probs)
+                    # 只保留score大于45的歌曲
+                    filtered_playlist = [(track_id, score) for track_id, score in final_scored_playlist if score > 45]
                     
                     # プレイリストデータを整形
                     playlist_data = []
-                    for i, (track_id, score) in enumerate(final_scored_playlist):
+                    for i, (track_id, score) in enumerate(filtered_playlist):
                         playlist_data.append({
                             "rank": i + 1,
                             "track_id": track_id,
