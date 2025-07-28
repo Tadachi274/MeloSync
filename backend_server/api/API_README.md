@@ -36,14 +36,14 @@ python start_api.py
 #### 方法3: uvicornを直接使用
 ```bash
 cd backend_server/api
-uvicorn playlist_api:app --host 0.0.0.0 --port 8000 --reload
+uvicorn playlist_api:app --host 0.0.0.0 --port 8004 --reload
 ```
 
 ### 4. APIドキュメントの確認
 
 ブラウザで以下のURLにアクセスしてAPIドキュメントを確認できます：
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+- Swagger UI: http://localhost:8004/docs
+- ReDoc: http://localhost:8004/redoc
 
 ## 📡 API エンドポイント
 

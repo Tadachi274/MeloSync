@@ -7,6 +7,18 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import pandas as pd
 import joblib
+import psycopg2
+from cryptography.fernet import Fernet
+from datetime import datetime, timezone
+
+# データベース設定
+DB_HOST     = os.getenv("DB_HOST")
+DB_PORT     = 5433
+DB_NAME     = os.getenv("DB_NAME")
+DB_USER     = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+FERNET_KEY  = os.getenv("FERNET_KEY")
+
 
 # 環境変数を読み込み（親ディレクトリの.envファイルを読み込む）
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
@@ -16,8 +28,8 @@ app = FastAPI(title="MeloSync Playlist Generator API", version="1.0.0")
 
 # リクエストモデル
 class AllPlaylistsRequest(BaseModel):
+    user_id: str  # ユーザーID
     playlist_ids: List[str]  # 複数のプレイリストIDを受け取る
-    top_k: int = 10000
     create_spotify_playlists: bool = False
     max_tracks: int = 20
 
@@ -71,8 +83,7 @@ def normalize_scores(
 
 
 def generate_all_playlists_from_multiple_sources(
-    playlist_ids: List[str],
-    top_k: int = 10000
+    playlist_ids: List[str]
 ) -> dict:
     """
     複数のプレイリストIDから楽曲を統合して、4つの感情状態の組み合わせで16個のプレイリストを生成する関数
@@ -148,7 +159,7 @@ def generate_all_playlists_from_multiple_sources(
                     
                     recommended_playlist_with_probs = recommend_songs_for_target(
                         model=model, X=X_playlist, track_ids=playlist_track_ids,
-                        target_mood_code=target_mood_code, top_k=top_k
+                        target_mood_code=target_mood_code, top_k=10000
                     )
                     
                     final_scored_playlist = normalize_scores(recommended_playlist_with_probs)
@@ -182,6 +193,154 @@ def generate_all_playlists_from_multiple_sources(
         raise ValueError(f"全プレイリスト生成中にエラーが発生しました: {e}")
 
 
+
+def fetch_user_tokens(user_id: str):
+    """ユーザーのSpotifyトークンを取得し、必要に応じてリフレッシュする"""
+    with psycopg2.connect(
+        host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
+        user=DB_USER, password=DB_PASSWORD
+    ) as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT access_token, refresh_token, expires_at
+                  FROM spotify_tokens
+                 WHERE user_id = %s
+            """, (user_id,))
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(404, "Tokens not found for user")
+            enc_access, enc_refresh, expires_at = row
+
+    f = Fernet(FERNET_KEY)
+    access_token  = f.decrypt(enc_access.encode()).decode("utf-8")
+    refresh_token = f.decrypt(enc_refresh.encode()).decode("utf-8")
+    
+    # トークンの有効期限をチェック
+    if expires_at and expires_at < datetime.now(timezone.utc):
+        # トークンが期限切れの場合、リフレッシュする
+        client_id = os.getenv("SPOTIFY_CLIENT_ID")
+        client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
+        redirect_uri = os.getenv("SPOTIFY_REDIRECT_URI", "http://localhost:8888/callback")
+        
+        from spotipy.oauth2 import SpotifyOAuth
+        sp_oauth = SpotifyOAuth(
+            client_id=client_id,
+            client_secret=client_secret,
+            redirect_uri=redirect_uri,
+            scope="playlist-modify-public playlist-modify-private"
+        )
+        
+        # リフレッシュトークンを使用して新しいアクセストークンを取得
+        token_info = sp_oauth.refresh_access_token(refresh_token)
+        if not token_info:
+            raise HTTPException(401, "Failed to refresh access token")
+        
+        # 新しいトークンをデータベースに保存
+        new_access_token = token_info['access_token']
+        new_refresh_token = token_info.get('refresh_token', refresh_token)
+        new_expires_at = datetime.fromtimestamp(token_info['expires_at'], tz=timezone.utc)
+        
+        # トークンを暗号化して保存
+        enc_new_access = f.encrypt(new_access_token.encode()).decode()
+        enc_new_refresh = f.encrypt(new_refresh_token.encode()).decode()
+        
+        with psycopg2.connect(
+            host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
+            user=DB_USER, password=DB_PASSWORD
+        ) as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    UPDATE spotify_tokens 
+                       SET access_token = %s, refresh_token = %s, expires_at = %s
+                     WHERE user_id = %s
+                """, (enc_new_access, enc_new_refresh, new_expires_at, user_id))
+                conn.commit()
+        
+        return new_access_token, new_refresh_token, new_expires_at
+    
+    return access_token, refresh_token, expires_at
+
+def create_user_spotify_playlist(
+    user_id: str,
+    recommended_playlist: List[Tuple[str, float]],
+    user_start_mood_name: str,
+    user_target_mood_name: str,
+    max_tracks: int = 20
+) -> Optional[str]:
+    """
+    ユーザーのSpotifyアカウントにプレイリストを作成する関数
+    
+    Args:
+        user_id: ユーザーID
+        recommended_playlist: 推薦された楽曲のリスト（トラックIDとスコアのタプル）
+        user_start_mood_name: 現在の気分
+        user_target_mood_name: 目標の気分
+        max_tracks: プレイリストに追加する最大楽曲数
+        
+    Returns:
+        str: 作成されたプレイリストのURL、失敗時はNone
+    """
+    try:
+        # ユーザーのトークンを取得
+        access_token, _, _ = fetch_user_tokens(user_id)
+        
+        # Spotifyクライアントを作成
+        sp = spotipy.Spotify(auth=access_token)
+        
+        # 現在のユーザー情報を取得
+        user_info = sp.current_user()
+        user_id_spotify = user_info['id']
+        print(f"情報: ユーザー '{user_info['display_name']}' として認証されました。")
+        
+        # 感情名のマッピング
+        mood_mapping = {
+            'Angry/Frustrated': 'ANGRY',
+            'Happy/Excited': 'HAPPY',
+            'Relax/Chill': 'RELAX',
+            'Tired/Sad': 'SAD'
+        }
+        
+        # プレイリスト名を生成
+        start_mood_short = mood_mapping.get(user_start_mood_name, user_start_mood_name)
+        target_mood_short = mood_mapping.get(user_target_mood_name, user_target_mood_name)
+        playlist_name = f"{start_mood_short}-to-{target_mood_short}"
+        playlist_description = f"MeloSync generated playlist: Transition from {user_start_mood_name} to {user_target_mood_name}"
+        
+        print(f"情報: プレイリスト '{playlist_name}' を作成中...")
+        
+        # プレイリストを作成
+        playlist = sp.user_playlist_create(
+            user=user_id_spotify,
+            name=playlist_name,
+            description=playlist_description,
+            public=True
+        )
+        
+        playlist_id = playlist['id']
+        playlist_url = playlist['external_urls']['spotify']
+        
+        # 推薦された楽曲をプレイリストに追加
+        track_ids = [track_id for track_id, _ in recommended_playlist[:max_tracks]]
+        
+        if track_ids:
+            print(f"情報: {len(track_ids)} 曲をプレイリストに追加中...")
+            
+            # 楽曲をプレイリストに追加
+            sp.playlist_add_items(playlist_id, track_ids)
+            
+            print(f"✅ プレイリストが正常に作成されました！")
+            print(f"   プレイリスト名: {playlist_name}")
+            print(f"   楽曲数: {len(track_ids)}")
+            print(f"   プレイリストURL: {playlist_url}")
+            
+            return playlist_url
+        else:
+            print("エラー: 追加する楽曲がありません。")
+            return None
+            
+    except Exception as e:
+        print(f"エラー: プレイリスト作成中にエラーが発生しました: {e}")
+        return None
 
 @app.get("/")
 async def root():
@@ -219,8 +378,7 @@ async def generate_all_playlists_endpoint(request: AllPlaylistsRequest):
 
         # 全プレイリスト生成
         all_playlists = generate_all_playlists_from_multiple_sources(
-            playlist_ids=request.playlist_ids,
-            top_k=request.top_k
+            playlist_ids=request.playlist_ids
         )
         
         # 成功したプレイリスト数をカウント
@@ -236,13 +394,6 @@ async def generate_all_playlists_endpoint(request: AllPlaylistsRequest):
         spotify_playlist_urls = None
         if request.create_spotify_playlists:
             try:
-                # プレイリスト作成関数をインポート（相対インポート）
-                import sys
-                sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-                
-                # generate_final_playlistから関数をインポート
-                from generate_final_playlist import create_spotify_playlist
-                
                 spotify_playlist_urls = {}
                 
                 # 各感情の組み合わせでプレイリストを作成
@@ -256,8 +407,9 @@ async def generate_all_playlists_endpoint(request: AllPlaylistsRequest):
                             for track in all_playlists[current_mood][target_mood]["playlist"]:
                                 recommended_playlist.append((track["track_id"], track["transition_score"]))
                             
-                            # Spotifyプレイリストを作成
-                            playlist_url = create_spotify_playlist(
+                            # ユーザーのSpotifyプレイリストを作成
+                            playlist_url = create_user_spotify_playlist(
+                                user_id=request.user_id,
                                 recommended_playlist=recommended_playlist,
                                 user_start_mood_name=current_mood,
                                 user_target_mood_name=target_mood,
