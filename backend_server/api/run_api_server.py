@@ -28,9 +28,9 @@ def main():
     
     print("📡 APIサーバー設定:")
     print(f"   - ホスト: 0.0.0.0")
-    print(f"   - ポート: 8000")
-    print(f"   - APIドキュメント: http://localhost:8000/docs")
-    print(f"   - ヘルスチェック: http://localhost:8000/health")
+    print(f"   - ポート: 8004")
+    print(f"   - APIドキュメント: http://localhost:8004/docs")
+    print(f"   - ヘルスチェック: http://localhost:8004/health")
     print("=" * 50)
     
     try:
@@ -38,7 +38,7 @@ def main():
         uvicorn.run(
             "playlist_api:app",
             host="0.0.0.0",
-            port=8000,
+            port=8004,
             reload=True,  # 開発用にホットリロードを有効化
             log_level="info"
         )
