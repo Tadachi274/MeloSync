@@ -124,7 +124,7 @@ def create_or_update_playlist(
         target_playlist_id = new_playlist["id"]
         print(f"新しいプレイリスト '{new_playlist_name}' (ID: {target_playlist_id}) を作成しました。")
 
-    
+
     uris_to_add = []
     # --- ステップ2: 推薦ロジックを呼び出し、曲のIDリストを取得 ---
     # 気分移行が指定されている場合、generate_final_playlistを呼び出す
@@ -162,7 +162,7 @@ def create_or_update_playlist(
         else:
             print("警告: 推薦リストの生成に失敗しました。プレイリストは空のままです。")
             pass
-            
+
     else:
         # (フォールバック処理) 気分移行が指定されない場合、元コードのpopularityフィルターを適用
         print("情報: 気分移行が指定されていないため、popularity > 50 の曲をフィルタリングします。")
@@ -176,14 +176,14 @@ def create_or_update_playlist(
             track = sp.track(uri)
             if track.get("popularity", 0) > 50:
                 uris_to_add.append(uri)
-    
+
     # --- ステップ3: 抽出した曲をプレイリストに追加 ---
     if uris_to_add:
         # プレイリストの中身を完全に置き換える場合はこちらが効率的です。
         # まずは100件ずつ追加します（APIの制限のため）
         for i in range(0, len(uris_to_add), 100):
             sp.playlist_add_items(target_playlist_id, uris_to_add[i:i+100])
-        
+
         print(f"情報: {len(uris_to_add)} 曲をプレイリスト '{new_playlist_name}' に追加しました。")
 
     else:
