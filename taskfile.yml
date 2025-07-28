@@ -55,6 +55,10 @@ tasks:
     cmds:
       - uvicorn spotify_api:app --host 0.0.0.0 --port 8003 --reload
 
+  run-AI-server:
+    dir: ./backend_server/api
+    cmds:
+      - uvicorn playlist_api:app --host 0.0.0.0 --port 8004 --reload
   
 
   install-dev-tools:
