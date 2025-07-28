@@ -88,10 +88,18 @@ fun MainScreen(
     spotifyViewModel: SpotifyViewModel,
     authViewModel : AuthViewModel,
 ) {
+    val TAG ="MainScreen"
+    Log.d(TAG,"MainScreen起動")
     // ViewModelに選択された感情をセット
     LaunchedEffect(key1 = emotion) {
-        mainviewModel.setEmotion(emotion)
+        try {
+            mainviewModel.setEmotion(emotion)
+            Log.d(TAG,"setEmotion")
+        } catch (e: Exception) {
+            Log.e("LaunchedEffect", "setEmotion failed", e)
+        }
     }
+    Log.d(TAG,"LaunchedEffectクリア")
 
     var showMenu by remember { mutableStateOf(false) }
     var showPlaylistDialog by remember { mutableStateOf(false) }
@@ -114,7 +122,10 @@ fun MainScreen(
         val response = AuthorizationClient.getResponse(result.resultCode, result.data)
         spotifyViewModel.handleAppRemoteAuthResponse(response, context)
     }
-    spotifyViewModel.connectToAppRemote(context, authLauncher)
+
+    LaunchedEffect(authLauncher) {
+        spotifyViewModel.connectToAppRemote(context, authLauncher)
+    }
     if (showPlaylistDialog) {
 //        PlaylistSelectionDialog(
         SettingScreen(
