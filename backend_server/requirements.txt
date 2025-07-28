@@ -3,11 +3,9 @@ spotipy==2.25.0
 scikit-learn==1.3.2
 tensorflow
 requests
-dotenv
+python-dotenv
 uvicorn
 fastapi
 python-jose[cryptography]
 psycopg2-binary
 cryptography
-python-dotenv
-spotipy
