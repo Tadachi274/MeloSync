@@ -170,12 +170,10 @@ class SpotifyViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun setJwt() {
-        viewModelScope.launch {
-            val jwt = repository.getJwt()
-            Log.d(TAG,"setJwt.jwt:${jwt}")
-            _jwt.value = jwt
-        }
+    suspend fun setJwt() {
+        val jwt = repository.getJwt()
+        Log.d(TAG,"setJwt.jwt:${jwt}")
+        _jwt.value = jwt
     }
 
     // --- Web APIを使った再生コントロール ---
@@ -283,7 +281,9 @@ class SpotifyViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     suspend fun fetchPlaylistList() {
+        Log.d(TAG,"fetchPlaylistList")
         val token = _jwt.value
+        Log.d(TAG,"fetchPlaylistList.jwt:${token}")
         if (token == null) {
             Log.e("SpotifyViewModel", "JWT is not available.")
             return
@@ -299,6 +299,7 @@ class SpotifyViewModel(app: Application) : AndroidViewModel(app) {
                 _playlists.value = playlists
             } else {
                 _error.value = "Playlist fetch failed: ${response.code()}"
+                Log.e("SpotifyViewModel", "fetchPlaylist error ${response.code()}.")
             }
         } catch (e: Exception) {
             _error.value = "Error: ${e.message}"
