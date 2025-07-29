@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -81,6 +82,12 @@ fun HomeScreen(
                     Button(
                         modifier = Modifier.size(80.dp), // Button size
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer), // Button background color
+                        shape = RoundedCornerShape(50), // 丸み
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 6.dp,
+                            pressedElevation = 8.dp,
+                            disabledElevation = 0.dp
+                        ),
                         onClick = {
                             scope.launch {
                                 try {

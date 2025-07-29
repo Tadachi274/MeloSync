@@ -13,7 +13,8 @@ data class AuthUiState(
     val isLoading: Boolean = false,
     val isLoggedIn: Boolean = false,
     val isSpotifyLoggedIn:Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val successMessage: String? = null
 )
 
 class AuthViewModel(app: Application) : AndroidViewModel(app) {
@@ -48,8 +49,13 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                 if (jwt != null) {
                     repository.saveJwt(jwt)
                     _jwt.value = jwt
-                    _uiState.update { it.copy(isLoggedIn = true) }
-                    _uiState.update { it.copy(isSpotifyLoggedIn = false) }
+                    _uiState.update {
+                        it.copy(
+                            isLoggedIn = true,
+                            isSpotifyLoggedIn = false,
+                            successMessage = "ログインに成功しました"
+                        )
+                    }
                 } else {
                     _uiState.update { it.copy(errorMessage = "サーバーから JWT を取得できませんでした") }
                 }
@@ -73,6 +79,10 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                 updated
             }
         }
+    }
+
+    fun clearSuccessMessage() {
+        _uiState.update { it.copy(successMessage = null) }
     }
 
     /** ログアウト処理 */
