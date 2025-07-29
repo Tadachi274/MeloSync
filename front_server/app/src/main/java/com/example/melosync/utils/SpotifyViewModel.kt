@@ -297,6 +297,7 @@ class SpotifyViewModel(app: Application) : AndroidViewModel(app) {
                 val json = Gson().toJson(playlists)
                 Log.d(TAG, "全プレイリストJSON: $json")
                 _playlists.value = playlists
+                truePlaylistAll()
             } else {
                 _error.value = "Playlist fetch failed: ${response.code()}"
                 Log.e("SpotifyViewModel", "fetchPlaylist error ${response.code()}.")
