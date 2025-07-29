@@ -111,6 +111,8 @@ fun MainScreen(
     val playerState by spotifyViewModel.playerState.collectAsState()
     val currentTrackImage by spotifyViewModel.currentTrackImage.collectAsState()
     val playbackQueue by spotifyViewModel.playbackQueue.collectAsStateWithLifecycle()
+    val isClassifying by spotifyViewModel.isClassifying.collectAsState()
+
     // Spotify認証の結果を受け取るためのランチャー
     val authLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -205,132 +207,160 @@ fun MainScreen(
                 )
             )
             // --- 修正箇所ここまで ---
+
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
-//                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-//            verticalArrangement = Arrangement.Center
-//            verticalArrangement = Arrangement.Top
+                .padding(paddingValues)
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text =  "なりたい気分にスライドしてね",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(top = 1.dp)
-            )
-            // 感情グラフを表示
-            Spacer(Modifier.weight(1f))
-            EmotionGraph(
-                coordinate = emotionCoordinate,
-                firstCoordinate = firstEmotionCoordinate,
-                pointColor = pointColor,
-                onCoordinateChange = { newOffset, canvasSize, radius ->
-                    mainviewModel.updateCoordinate(newOffset, canvasSize, radius)
-                }
-            )
-            Spacer(Modifier.weight(1f))
-            Row(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth() // ← 親要素の幅いっぱいに広げる
-                    .padding(horizontal = 16.dp), // ← 左右に余白を追加
-                horizontalArrangement = Arrangement.spacedBy(8.dp) // ← ボタン間にスペースを設ける
-            ){
-                OutlinedButton(
-                    modifier = Modifier.weight(1f), // ← weightを追加
-                    onClick = {
-//                        onNavigateToSettings()
-                        showPlaylistDialog = true
-//                        Toast.makeText(context, "プレイリスト選択は後で実装します", Toast.LENGTH_SHORT).show()
-                    },
-                    // ボタンの色をテーマに合わせて調整
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AppBackground,
-                        contentColor = AppPurple2
-                    ),
-                    shape = RoundedCornerShape(50), // 丸み
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 6.dp,
-                        pressedElevation = 8.dp,
-                        disabledElevation = 0.dp
-                    )
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                //                .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                //            verticalArrangement = Arrangement.Center
+                //            verticalArrangement = Arrangement.Top
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "なりたい気分にスライドしてね",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(top = 1.dp)
+                )
+                // 感情グラフを表示
+                Spacer(Modifier.weight(1f))
+                EmotionGraph(
+                    coordinate = emotionCoordinate,
+                    firstCoordinate = firstEmotionCoordinate,
+                    pointColor = pointColor,
+                    onCoordinateChange = { newOffset, canvasSize, radius ->
+                        mainviewModel.updateCoordinate(newOffset, canvasSize, radius)
+                    }
+                )
+                Spacer(Modifier.weight(1f))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth() // ← 親要素の幅いっぱいに広げる
+                        .padding(horizontal = 16.dp), // ← 左右に余白を追加
+                    horizontalArrangement = Arrangement.spacedBy(8.dp) // ← ボタン間にスペースを設ける
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.change_playlist),
-                        contentDescription = "プレイリスト変更",
-                        modifier = Modifier.size(ButtonDefaults.IconSize) // デフォルトのアイコンサイズ
-                    )
-                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing)) // アイコンとテキストの間のスペース
-                    Text(
-                        style = MaterialTheme.typography.bodySmall, // ← テーマからスタイルを適用
-                        maxLines = 1,
-                        text = "プレイリスト変更"
-                    )
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f), // ← weightを追加
+                        onClick = {
+                            //                        onNavigateToSettings()
+                            showPlaylistDialog = true
+                            //                        Toast.makeText(context, "プレイリスト選択は後で実装します", Toast.LENGTH_SHORT).show()
+                        },
+                        // ボタンの色をテーマに合わせて調整
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AppBackground,
+                            contentColor = AppPurple2
+                        ),
+                        shape = RoundedCornerShape(50), // 丸み
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 6.dp,
+                            pressedElevation = 8.dp,
+                            disabledElevation = 0.dp
+                        )
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.change_playlist),
+                            contentDescription = "プレイリスト変更",
+                            modifier = Modifier.size(ButtonDefaults.IconSize) // デフォルトのアイコンサイズ
+                        )
+                        Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing)) // アイコンとテキストの間のスペース
+                        Text(
+                            style = MaterialTheme.typography.bodySmall, // ← テーマからスタイルを適用
+                            maxLines = 1,
+                            text = "プレイリスト変更"
+                        )
+                    }
+
+                    // 「更新」ボタン
+                    Button(
+                        modifier = Modifier.weight(1f), // ← weightを追加
+                        shape = RoundedCornerShape(50), // 丸み
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 6.dp,
+                            pressedElevation = 8.dp,
+                            disabledElevation = 0.dp
+                        ),
+                        onClick = {
+                            Log.d("Main", "Click更新")
+                            //                        Toast.makeText(context, "プレイリスト更新は後で実装します", Toast.LENGTH_SHORT).show()
+                            //                        spotifyViewModel.play("spotify:track:7v6DqVMaljJDUXYavMY4kf")
+                            spotifyViewModel.loadQueue(firstEmotion, currentEmotion)
+                            //                        spotifyViewModel.play("spotify:track:${playbackQueue[0].trackId}")
+                            Toast.makeText(
+                                context,
+                                "プレイリストを更新しました",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AppPurple2,
+                            contentColor = AppBackground
+                        )
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.update_playlist),
+                            contentDescription = "更新",
+                            modifier = Modifier.size(ButtonDefaults.IconSize)
+                        )
+                        Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                        Text("更新")
+                    }
                 }
 
-                // 「更新」ボタン
-                Button(
-                    modifier = Modifier.weight(1f), // ← weightを追加
-                    shape = RoundedCornerShape(50), // 丸み
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 6.dp,
-                        pressedElevation = 8.dp,
-                        disabledElevation = 0.dp
-                    ),
-                    onClick = {
-                        Log.d("Main","Click更新")
-//                        Toast.makeText(context, "プレイリスト更新は後で実装します", Toast.LENGTH_SHORT).show()
-//                        spotifyViewModel.play("spotify:track:7v6DqVMaljJDUXYavMY4kf")
-                        spotifyViewModel.loadQueue(firstEmotion, currentEmotion)
-//                        spotifyViewModel.play("spotify:track:${playbackQueue[0].trackId}")
-                        Toast.makeText(context, "プレイリストを更新しました", Toast.LENGTH_SHORT).show()
-                              },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AppPurple2,
-                        contentColor = AppBackground
-                    )
+                // 現在の象限を表示
+                //            Text(
+                //                text =  currentEmotion.name,
+                //                style = MaterialTheme.typography.headlineSmall,
+                ////                modifier = Modifier.padding(top = 16.dp)
+                //            )
+                //
+                //            Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Spotifyプレーヤーのプレースホルダー
+                SpotifyPlayerUI(
+                    isConnected = appRemote != null,
+                    playerState = playerState,
+                    //                currentTrack = currentTrack,
+                    trackImage = currentTrackImage, // ★追加
+                    onConnectClick = { spotifyViewModel.connectToAppRemote(context, authLauncher) },
+                    onPauseClick = { spotifyViewModel.pause() },
+                    onResumeClick = { spotifyViewModel.resume() },
+                    onSeekTo = { position -> spotifyViewModel.seekTo(position) },
+                    onSkipPreviousClick = { spotifyViewModel.skipPrevious() },
+                    onSkipNextClick = { spotifyViewModel.skipNext() },
+                    onPlayItem = { item -> spotifyViewModel.play("spotify:track:${item}") },
+                    queue = playbackQueue,
+                    imageLoader = imageLoader,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            Log.d("MainScreen","isClassify:${isClassifying}")
+            if (isClassifying) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .padding(vertical = 8.dp)
+                        .align(Alignment.TopCenter)
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.update_playlist),
-                        contentDescription = "更新",
-                        modifier = Modifier.size(ButtonDefaults.IconSize)
+                    Text(
+                        text = "プレイリスト作成中...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.align(Alignment.Center)
                     )
-                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                    Text("更新")
                 }
             }
-
-            // 現在の象限を表示
-//            Text(
-//                text =  currentEmotion.name,
-//                style = MaterialTheme.typography.headlineSmall,
-////                modifier = Modifier.padding(top = 16.dp)
-//            )
-//
-//            Spacer(modifier = Modifier.weight(1f))
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Spotifyプレーヤーのプレースホルダー
-            SpotifyPlayerUI(
-                isConnected = appRemote != null,
-                playerState = playerState,
-//                currentTrack = currentTrack,
-                trackImage = currentTrackImage, // ★追加
-                onConnectClick = { spotifyViewModel.connectToAppRemote(context, authLauncher) },
-                onPauseClick = { spotifyViewModel.pause() },
-                onResumeClick = { spotifyViewModel.resume() },
-                onSeekTo = { position -> spotifyViewModel.seekTo(position) },
-                onSkipPreviousClick = { spotifyViewModel.skipPrevious() },
-                onSkipNextClick = { spotifyViewModel.skipNext() },
-                onPlayItem = {item -> spotifyViewModel.play("spotify:track:${item}")},
-                queue = playbackQueue,
-                imageLoader = imageLoader,
-            )
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
