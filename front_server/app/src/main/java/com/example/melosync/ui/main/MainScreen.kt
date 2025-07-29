@@ -76,6 +76,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.Divider
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.melosync.ui.auth.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class) // TopAppBar用に追記
@@ -250,6 +251,12 @@ fun MainScreen(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = AppBackground,
                         contentColor = AppPurple2
+                    ),
+                    shape = RoundedCornerShape(50), // 丸み
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 6.dp,
+                        pressedElevation = 8.dp,
+                        disabledElevation = 0.dp
                     )
                 ) {
                     Icon(
@@ -268,13 +275,20 @@ fun MainScreen(
                 // 「更新」ボタン
                 Button(
                     modifier = Modifier.weight(1f), // ← weightを追加
+                    shape = RoundedCornerShape(50), // 丸み
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 6.dp,
+                        pressedElevation = 8.dp,
+                        disabledElevation = 0.dp
+                    ),
                     onClick = {
                         Log.d("Main","Click更新")
 //                        Toast.makeText(context, "プレイリスト更新は後で実装します", Toast.LENGTH_SHORT).show()
 //                        spotifyViewModel.play("spotify:track:7v6DqVMaljJDUXYavMY4kf")
                         spotifyViewModel.loadQueue(firstEmotion, currentEmotion)
 //                        spotifyViewModel.play("spotify:track:${playbackQueue[0].trackId}")
-                    },
+                        Toast.makeText(context, "プレイリストを更新しました", Toast.LENGTH_SHORT).show()
+                              },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = AppPurple2,
                         contentColor = AppBackground
