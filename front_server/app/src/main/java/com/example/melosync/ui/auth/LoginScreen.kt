@@ -92,7 +92,8 @@ fun LoginScreen(
                                 onClick = {
                                 // クライアントID／リダイレクトURI は適宜置き換えてください
                                 Log.d("LoginScreen", "SpotifyLoginButton Click.")
-                                val clientId = "ced2ee375b444183a40d0a95de22d132"
+                                //val clientId = "ced2ee375b444183a40d0a95de22d132"
+                                val clientId = "b6c7f98696f24a91b1c1fa99e96d0388"
                                 val redirectUri = "com.example.melosync://callback"
                                 val authUri = Uri.Builder()
                                     .scheme("https")
