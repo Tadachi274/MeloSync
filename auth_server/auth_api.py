@@ -134,9 +134,16 @@ async def spotify_callback(
             detail = resp.json()
         except ValueError:
             detail = resp.text
+        if resp.status_code == 429:
+            print("DEBUG Headers:", resp.headers)  # ← 追加
+            retry_after = resp.headers.get("Retry-After")
+            print("DEBUG Retry-After:", retry_after)  # ← 追加
+            raise HTTPException(status_code=429, detail=f"Rate limit hit. Retry after {retry_after} seconds.")
         if resp.status_code != 200:
         # 失敗時はステータスと Spotify のエラー内容をそのまま投げる
+            print("DEBUG Error Response:", detail)
             raise HTTPException(status_code=resp.status_code, detail=detail)
+        
         token_info = detail
         # 取得したトークンをユーザー情報と紐付けてデータベースに保存する
         access_token = token_info["access_token"]
@@ -153,10 +160,11 @@ async def spotify_callback(
         db_utils.save_tokens_to_db(user_id, encrypted_access, encrypted_refresh, expires_at)
 
         # これでバックエンドはユーザーのプレイリストを取得できる
-        playlists = db_utils.get_user_playlists(access_token)
-        print(playlists)
+        #playlists = db_utils.get_user_playlists(access_token)
+        #print(playlists)
 
-        return {"status": "success", "playlists": playlists}
+        #return {"status": "success", "playlists": playlists}
+        return {"status": "success"}
 
     except requests.exceptions.HTTPError as e:
         return JSONResponse(status_code=e.response.status_code, content={"error": str(e)})
