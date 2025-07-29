@@ -297,6 +297,7 @@ class SpotifyViewModel(app: Application) : AndroidViewModel(app) {
                 val json = Gson().toJson(playlists)
                 Log.d(TAG, "全プレイリストJSON: $json")
                 _playlists.value = playlists
+                truePlaylistAll()
             } else {
                 _error.value = "Playlist fetch failed: ${response.code()}"
                 Log.e("SpotifyViewModel", "fetchPlaylist error ${response.code()}.")
@@ -378,14 +379,18 @@ class SpotifyViewModel(app: Application) : AndroidViewModel(app) {
         return activePlaylistIds
     }
 
-    fun loadQueue() {
+    fun loadQueue(firstEmotion :SendEmotion, currentEmotion: SendEmotion) {
         viewModelScope.launch {
             Log.d(TAG,"LoadQueue")
             val chosenPlaylists = abstractionChosenPlaylists()
             Log.d(TAG,"loadQueue.chosenPlaylists:${chosenPlaylists}")
-            //TODO 設定した感情を渡す
-            fetchEmotionPlaylist(SendEmotion.HAPPY, SendEmotion.HAPPY, chosenPlaylists = chosenPlaylists)
-            // 今回はダミーデータを表示
+
+            fetchEmotionPlaylist(
+                firstEmotion,
+                currentEmotion,
+                chosenPlaylists
+            )            // 今回はダミーデータを表示
+
             //_playbackQueue.value = dummyTrackLists
             if (_playbackQueue.value.isNotEmpty()) {
                 play("spotify:track:${_playbackQueue.value[0].trackId}")
