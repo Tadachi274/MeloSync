@@ -86,6 +86,9 @@ class SpotifyViewModel(app: Application) : AndroidViewModel(app) {
     private val _isLoading = MutableStateFlow<Boolean>(false)
     val isLoading = _isLoading.asStateFlow()
 
+    private val _isClassifying = MutableStateFlow(false)
+    val isClassifying = _isClassifying.asStateFlow()
+
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
     // --- App Remote SDKの接続フロー ---
@@ -179,6 +182,10 @@ class SpotifyViewModel(app: Application) : AndroidViewModel(app) {
     fun setLoading(isLoading: Boolean) {
         _isLoading.value = isLoading
     }
+
+    fun setClassifying(isProcessing: Boolean) {
+        _isClassifying.value = isProcessing
+    }
     // --- Web APIを使った再生コントロール ---
 
     /**
@@ -219,6 +226,7 @@ class SpotifyViewModel(app: Application) : AndroidViewModel(app) {
             }
             val authHeader = "Bearer $token"
             _isLoading.value = true
+            setClassifying(true)
             try {
                 val playlistIds: List<String> = _playlists.value.map { it.playlistId }
                 Log.d(TAG, "Playlist IDs: $playlistIds")
@@ -231,6 +239,7 @@ class SpotifyViewModel(app: Application) : AndroidViewModel(app) {
                 _error.value = "Error: ${e.message}"
             } finally {
                 _isLoading.value = false
+                setClassifying(false)
             }
         }
     }
@@ -367,12 +376,8 @@ class SpotifyViewModel(app: Application) : AndroidViewModel(app) {
         // viewModelScopeでコルーチンを開始
         Log.d(TAG,"loadPlaylists")
         viewModelScope.launch {
-            // TODO: ここで実際にバックエンドAPIを呼び出す
             fetchPlaylistList()
             classify()
-            // 今回はダミーデータを表示
-            //_playlists.value = dummyPlaylists
-
         }
     }
 
