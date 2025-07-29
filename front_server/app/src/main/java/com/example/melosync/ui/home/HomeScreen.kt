@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -51,7 +52,16 @@ fun HomeScreen(
 ) {
     val apiService = ApiClient.apiService
     val scope = rememberCoroutineScope()
+    val isLoading by spotifyViewModel.isLoading.collectAsState()
     Scaffold { paddingValues ->
+        if (isLoading) {
+            AlertDialog(
+                onDismissRequest = {}, // タップしても閉じない
+                title = { Text("処理中") },
+                text = { Text("感情推定中です...") },
+                confirmButton = {}
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -92,8 +102,10 @@ fun HomeScreen(
                             scope.launch {
                                 try {
                                     Log.d("HomeScreen","EmotionButtonClick")
+                                    spotifyViewModel.setLoading(true)
                                     spotifyViewModel.setJwt() //JWTセット
                                     spotifyViewModel.loadPlaylists()
+
                                     // 1. APIを呼び出し、レスポンスを取得
                                     val response = apiService.analyzeEmotion(Emotion2(emotion.name))
                                     Log.d("HomeScreen","analyzeEmotion:${response.isSuccessful}")
@@ -131,6 +143,8 @@ fun HomeScreen(
                                     Log.e("HomeScreen", "Exception: ${e.message}")
                                     viewModel.onEmotionSelected(emotion.toSendEmotion())
                                     onNavigateToMain(emotion.toSendEmotion())
+                                }finally {
+                                    spotifyViewModel.setLoading(false)  // ← 必ず消す
                                 }
                             }
 

@@ -176,6 +176,9 @@ class SpotifyViewModel(app: Application) : AndroidViewModel(app) {
         _jwt.value = jwt
     }
 
+    fun setLoading(isLoading: Boolean) {
+        _isLoading.value = isLoading
+    }
     // --- Web APIを使った再生コントロール ---
 
     /**
