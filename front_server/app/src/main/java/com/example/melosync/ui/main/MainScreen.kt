@@ -217,15 +217,13 @@ fun MainScreen(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
+                    .fillMaxSize(),
                 //                .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 //            verticalArrangement = Arrangement.Center
                 //            verticalArrangement = Arrangement.Top
             ) {
-                Spacer(modifier = Modifier.height(16.dp))
-
+                Spacer(Modifier.weight(1f))
                 Text(
                     text = "なりたい気分にスライドしてね",
                     style = MaterialTheme.typography.titleLarge,
