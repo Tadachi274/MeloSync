@@ -29,26 +29,10 @@ tasks:
     cmds:
       - DB_HOST=localhost DB_PORT=5433 DB_USER=user DB_PASSWORD=password DB_NAME=devdb go run ./cmd/main.go
 
-  run-jwt-server:
-    dir: ./auth_server
-    cmds:
-      - uvicorn return_jwt:app --reload --host 0.0.0.0 --port 8000
-
   run-auth-server:
     dir: ./auth_server
     cmds:
       - uvicorn auth_api:app --reload --host 0.0.0.0 --port 8000
-
-
-  run-spotify-auth:
-    dir: ./auth_server
-    cmds:
-      - uvicorn get_code:app --host 0.0.0.0 --port 8001 --reload
-
-  run-get-save-accesstoken:
-    dir: ./auth_server
-    cmds:
-      - uvicorn get_save_accesstoken:app --host 0.0.0.0 --port 8002 --reload
 
   run-spotify-server:
     dir: ./spotify_test
@@ -59,6 +43,11 @@ tasks:
     dir: ./backend_server/api
     cmds:
       - uvicorn playlist_api:app --host 0.0.0.0 --port 8004 --reload
+
+  run-GPT-server:
+    dir: ./backend_server
+    cmds:
+      - uvicorn get_mood:app --reload --host 0.0.0.0 --port 5000
   
 
   install-dev-tools:
