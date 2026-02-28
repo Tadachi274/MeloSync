@@ -73,7 +73,9 @@ FERNET_KEY=your_fernet_key
 OPENAI_API_KEY=your_openai_api_key
 ```
 
-** front_server/app/src/main/java/com/example/com/ui/auth内のLoginScreen.kt内のclientIdとredirectUriも適宜変える必要あり(悪の設計)**
+** front_server/app/src/main/java/com/example/com/melosync/ui/auth内のLoginScreen.kt内のclientIdとredirectUriも適宜変える必要あり(悪の設計)**
+** front_server/app/src/main/java/com/example/com/melosyncのApiClient内のbaseUrlを自身のWifiの番号にする必要あり **
+** SpotifyViewModel.ktの_jwtの初期値も変える必要あり,jwtを正しく更新できていない（悪設計）**
 
 ## 5. Install Python dependencies
 
