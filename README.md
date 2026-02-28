@@ -128,3 +128,10 @@ Make sure all environment variables are correctly set up in `.env`, and all serv
 
 ## 機能③: 感情リクエスト〜音楽再生
 ![機能3](./Screenshot_3.png)
+
+---
+
+# MeloSync DEMO動画
+
+↓以下のリンクから見られます。
+https://youtube.com/shorts/Ahw-sm7fqHo?feature=share
