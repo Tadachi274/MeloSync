@@ -73,6 +73,8 @@ FERNET_KEY=your_fernet_key
 OPENAI_API_KEY=your_openai_api_key
 ```
 
+** front_server/app/src/main/java/com/example/com/ui/auth内のLoginScreen.kt内のclientIdとredirectUriも適宜変える必要あり(悪の設計)**
+
 ## 5. Install Python dependencies
 
 ```bash
